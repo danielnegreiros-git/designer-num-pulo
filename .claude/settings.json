@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:\\Dev\\gerente-num-pulo\\dist\\hook.js --sistema=designer",
+            "statusMessage": "Checando demandas no barramento...",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -26,6 +26,11 @@ Mudança exige decisão nova, com data e autor.
 1. **Motor de renderização: HTML/CSS → PNG via Playwright.** O brandguide já é CSS;
    template consome os tokens direto. Determinístico, repetível, tipografia
    pixel-perfect em qualquer dimensão (1080×1080, 1080×1350, 1280×720, A4).
+   **Base de markup: HTML estático + CSS com os tokens do brandguide.** Tailwind é
+   permitido como utilitário, com cópia local em `assets/` (sem CDN no render, para
+   determinismo e render offline). **React fica fora do pipeline de peça estática**:
+   não agrega em imagem parada e traria build. Handoff que chegar em React
+   (Claude Design, skills de frontend) é adaptado para HTML estático antes do render.
 2. **Workspace leve, uma ferramenta.** `tools/render.mjs` com subcomandos
    (render, tratamento via Sharp). Capacidade nova vira subcomando; ferramenta ou
    dependência nova exige decisão do Daniel.
@@ -40,8 +45,10 @@ Mudança exige decisão nova, com data e autor.
    - Design system do Guia app (`C:\Dev\Design System\Num Pulo Design System`;
      papel-creme, roxo `#4A12E0`, estética zine): UI do produto. Este worker só o
      usa se a demanda pedir explicitamente peça no visual do app.
-6. **Acervo de fotos**: `H:\Destinos`, `Y:` e legado em `D:`. Priorizar as pastas
-   de fotos exportadas de cada destino. **Somente leitura.** Sem índice próprio na
+6. **Acervo de fotos**: `H:\Destinos`, `Y:\numpulo\Destinos` e legado em
+   `D:\Projeto Num Pulo\Cidades` — mas o worker pode procurar em qualquer lugar.
+   Convenção: dentro da pasta do destino normalmente existe uma pasta `fotografia`;
+   priorizar as fotos exportadas. **Somente leitura.** Sem índice próprio na
    fase 1; índice vira decisão do Daniel se a busca virar gargalo real.
 7. **Este worker é o curador da skill `num-pulo-brand-guidelines`** — mesmo modelo
    do socialmedia com as skills de texto: mudança só com changelog datado na skill
@@ -129,8 +136,9 @@ demanda como interface, registro como fonte de verdade, entregável declarado na
 mesma sessão do commit, consumo declarado do que passar a ler. Hook `SessionStart`
 injetando demandas destinadas a `designer` (mesmo padrão do socialmedia).
 
-Pendência de fase 0: a identidade `designer` (role `np_designer`) precisa ser criada
-no gerente — sessão no repo do gerente ou credencial fornecida pelo Daniel.
+Identidade criada em 2026-08-07 (migration `2026-08-07-worker-designer.sql` no
+gerente): role `np_designer`, ficha no registro, `.env` local e hook `SessionStart`
+instalados, visibilidade testada (registro, fila, vigia, hook).
 
 ## 9. Fases e critérios de aceite
 
@@ -140,7 +148,8 @@ no gerente — sessão no repo do gerente ou credencial fornecida pelo Daniel.
 - [ ] `tools/render.mjs`: renderiza HTML de teste em 1080×1080 e 1280×720; Sharp
       comprime e converte
 - [ ] `design-system/tokens.css` extraído da brand-guidelines
-- [ ] Identidade `designer` no barramento; `registro` lista o worker
+- [x] Identidade `designer` no barramento; `registro` lista o worker (feito em 2026-08-07,
+      com hook `SessionStart` e `.env` já instalados)
 - [ ] Sync inicial do design system no claude.ai/design
 
 **Fase 1 — formatos fundadores (alvo: mockup pronto até o checkpoint de 23/08; D0 em 31/08):**
