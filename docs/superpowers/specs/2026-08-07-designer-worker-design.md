@@ -144,13 +144,13 @@ instalados, visibilidade testada (registro, fila, vigia, hook).
 
 **Fase 0 — fundação:**
 - [x] git init + remote GitHub (feito em 2026-08-07)
-- [ ] CLAUDE.md e docs/handoff.md
-- [ ] `tools/render.mjs`: renderiza HTML de teste em 1080×1080 e 1280×720; Sharp
-      comprime e converte
-- [ ] `design-system/tokens.css` extraído da brand-guidelines
+- [x] CLAUDE.md e docs/handoff.md (feito em 2026-08-07)
+- [x] `tools/render.mjs`: renderiza HTML de teste em 1080×1080 e 1280×720; Sharp
+      comprime e converte (feito em 2026-08-07)
+- [x] `design-system/tokens.css` extraído da brand-guidelines (feito em 2026-08-07)
 - [x] Identidade `designer` no barramento; `registro` lista o worker (feito em 2026-08-07,
       com hook `SessionStart` e `.env` já instalados)
-- [ ] Sync inicial do design system no claude.ai/design
+- [x] Sync inicial do design system no claude.ai/design (feito em 2026-08-07)
 
 **Fase 1 — formatos fundadores (alvo: mockup pronto até o checkpoint de 23/08; D0 em 31/08):**
 - [ ] Mockup/imagem de apresentação do Guia Num Pulo — ciclo completo com aprovação

@@ -2,24 +2,18 @@
 
 Atualizado: 2026-08-07.
 
-## Estado
+## Feito — Fase 0
 
-Fase 0 em implementação (plano: docs/superpowers/plans/2026-08-07-fase-0-fundacao.md).
-Feito até aqui: spec aprovado, git + GitHub, identidade `designer` no barramento
-(role, .env, hook SessionStart testados).
+Worker designer operacional: spec, git, identidade no barramento, CLAUDE.md,
+tools/render.mjs (HTML → PNG via Playwright + Sharp), design-system/tokens.css,
+logos, sync inicial no claude.ai/design (projeto 019e1dc1-2de2-7941-b801-4382556049d6).
 
-## Em andamento
+## Próximo — Fase 1 (alvo D0: 31/08)
 
-- Fase 0: CLAUDE.md, tools/render.mjs, tokens, fontes locais, logos, sync claude.ai/design.
-
-## Próximo passo
-
-1. Terminar as tasks do plano da fase 0, em ordem.
-2. Fase 1 (spec, seção 9): mockup do Guia (alvo 23/08), carrossel Lote Fundador,
-   thumbnail de YouTube, primeira calibração da brand-guidelines.
+Mockup do Guia (checkpoint 23/08), carrossel Lote Fundador (02/09), thumbnail
+YouTube, primeira calibração da num-pulo-brand-guidelines.
 
 ## Situações em aberto
 
-- Design system no claude.ai/design: projeto 019e1dc1-2de2-7941-b801-4382556049d6
-  ("Num Pulo Design System"), 3 arquivos.
-- ComfyUI: endpoint e invocação a levantar na primeira peça que precisar (fase 1).
+- ComfyUI: endpoint e invocação (levantar primeira peça que precisar).
+- Fontes no projeto remoto claude.ai/design caem em fallback local (assets/).
