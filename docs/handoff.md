@@ -20,6 +20,6 @@ Feito até aqui: spec aprovado, git + GitHub, identidade `designer` no barrament
 
 ## Situações em aberto
 
-- Projeto do design system no claude.ai/design: criar no sync inicial e registrar o
-  projectId aqui.
+- Design system no claude.ai/design: projeto 019e1dc1-2de2-7941-b801-4382556049d6
+  ("Num Pulo Design System"), 3 arquivos.
 - ComfyUI: endpoint e invocação a levantar na primeira peça que precisar (fase 1).
