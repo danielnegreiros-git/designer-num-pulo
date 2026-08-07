@@ -18,16 +18,28 @@ function sairUso(msg) {
   process.exit(2)
 }
 
-function lerArgs(argv) {
+const FLAGS_PERMITIDAS = {
+  render: ['largura', 'altura', 'escala', 'out', 'pagina-inteira'],
+  tratar: ['largura', 'altura', 'qualidade', 'out'],
+  info: [],
+}
+
+function lerArgs(argv, comando) {
+  const permitidas = FLAGS_PERMITIDAS[comando] || []
   const pos = []
   const op = {}
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
-    if (a === '--pagina-inteira') op.paginaInteira = true
-    else if (a.startsWith('--')) {
+    if (a.startsWith('--')) {
+      const nome = a.slice(2)
+      if (!permitidas.includes(nome)) sairUso(`flag desconhecida: ${a}`)
+      if (nome === 'pagina-inteira') {
+        op.paginaInteira = true
+        continue
+      }
       const v = argv[++i]
-      if (v === undefined) sairUso(`falta valor para ${a}`)
-      op[a.slice(2)] = v
+      if (v === undefined || v.startsWith('--')) sairUso(`falta valor para ${a}`)
+      op[nome] = v
     } else pos.push(a)
   }
   return { pos, op }
@@ -64,7 +76,8 @@ async function render(pos, op) {
   } finally {
     await browser.close()
   }
-  console.log(JSON.stringify({ ok: true, saida: op.out, largura: largura * escala, altura: altura * escala }))
+  const meta = await sharp(op.out).metadata()
+  console.log(JSON.stringify({ ok: true, saida: op.out, largura: meta.width, altura: meta.height }))
 }
 
 async function tratar(pos, op) {
@@ -95,9 +108,9 @@ async function info(pos) {
 }
 
 const [comando, ...resto] = process.argv.slice(2)
-const { pos, op } = lerArgs(resto)
 const comandos = { render, tratar, info }
 if (!comandos[comando]) sairUso(comando ? `comando desconhecido: ${comando}` : undefined)
+const { pos, op } = lerArgs(resto, comando)
 comandos[comando](pos, op).catch((e) => {
   console.error(e.message)
   process.exit(1)
