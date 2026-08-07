@@ -1,0 +1,32 @@
+<!-- @dsCard group="Cores" -->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Num Pulo — Paleta</title>
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1080px; height: 1080px; background: var(--branco); font-family: 'Poppins', sans-serif; padding: 64px; }
+  h1 { font-family: 'Instrument Serif', serif; font-size: 48px; color: var(--indigo); margin-bottom: 8px; }
+  p.sub { font-size: 14px; color: var(--violeta); text-transform: uppercase; letter-spacing: 0.3em; font-weight: 600; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .sw { border-radius: 12px; padding: 24px; height: 240px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid rgba(42,0,130,0.15); }
+  .sw b { font-size: 18px; font-weight: 600; }
+  .sw span { font-size: 13px; font-weight: 300; }
+</style>
+</head>
+<body>
+  <h1>Paleta <em>Num Pulo</em></h1>
+  <p class="sub">Fundos: branco, lavanda, indigo — nesta ordem</p>
+  <div class="grid">
+    <div class="sw" style="background: var(--branco); color: var(--indigo);"><b>Pure White</b><span>#FFFFFF · fundo padrão</span></div>
+    <div class="sw" style="background: var(--lavanda); color: var(--indigo);"><b>Moon Lavender</b><span>#EBDAF8 · fundo secundário</span></div>
+    <div class="sw" style="background: var(--indigo); color: var(--branco);"><b>Persian Indigo</b><span>#2A0082 · impacto pontual</span></div>
+    <div class="sw" style="background: var(--branco); color: var(--indigo); border: 3px solid var(--laranja);"><b>Portland Orange</b><span>#FF5931 · só acento, nunca fundo</span></div>
+    <div class="sw" style="background: var(--branco); color: var(--indigo); border: 3px solid var(--lime);"><b>Electric Lime</b><span>#E4FE00 · só acento, nunca fundo</span></div>
+    <div class="sw" style="background: var(--branco); color: var(--violeta); border: 3px solid var(--violeta);"><b>Violet Mid</b><span>#9b40f5 · tags e labels sobre claro</span></div>
+  </div>
+</body>
+</html>

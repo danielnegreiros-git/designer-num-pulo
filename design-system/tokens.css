@@ -1,0 +1,14 @@
+/* Tokens do brandguide Num Pulo — fonte: skill global num-pulo-brand-guidelines.
+   Mudança aqui acompanha calibração da skill, nunca diverge dela. */
+:root {
+  --branco:  #FFFFFF; /* fundo padrão */
+  --lavanda: #EBDAF8; /* fundo secundário */
+  --indigo:  #2A0082; /* fundo de impacto e texto sobre claro */
+  --laranja: #FF5931; /* acento pontual; proibido como fundo */
+  --lime:    #E4FE00; /* acento máximo; proibido como fundo; texto só indigo/preto */
+  --violeta: #9b40f5; /* tags/labels sobre fundo claro; proibido sobre indigo */
+}
+
+.font-display   { font-family: 'Anton', sans-serif; text-transform: uppercase; }
+.font-editorial { font-family: 'Instrument Serif', serif; }
+.font-body      { font-family: 'Poppins', sans-serif; }
