@@ -114,6 +114,17 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   roda aqui. `render.mjs hald --out identity.png` gera a tabela; o Daniel revela com o
   preset e exporta PNG sem redimensionar; `cor --lut <hald-revelado.png>` aplica. Vale
   para qualquer editor que revele imagem, não só Lightroom.
+- **`cor --preset <arq.xmp>` é experimental e reprovado na prática.** Ele lê o `.xmp` e
+  reimplementa o que é pontual (curva, contraste, altas/sombras, HSL, granulado), mas não
+  reproduz o Camera Raw: aplicado num CR3 revelado, o resultado saiu esverdeado e
+  posterizado ao lado da revelação neutra. Preferir sempre o HALD. O que ele tem de útil é
+  listar, no JSON, o que **não** transporta (Texture, Clarity, Dehaze, sharpen, NR).
+- **A rota fiel ao preset é o Camera Raw, e a máquina já tem.** Lightroom Classic e
+  Photoshop 2024 instalados, e `New-Object -ComObject Photoshop.Application` responde
+  (versão 27.9.1, testado em 2026-08-08). O ACR lê `.xmp` como **sidecar** ao lado do RAW,
+  então dá para revelar com o preset exato do Daniel. Não implementado — quando precisar,
+  esse é o caminho, não `darktable-cli`/`rawtherapee-cli`, que usam formato próprio
+  (`.xmp` do darktable, `.pp3`) e **não** leem preset do Lightroom.
 - **Frame 16:9 em slide 3:4 sofre upscale de ~1,33×** e nunca vai bater com foto nativa
   vertical em detalhe fino. O sharpen compensa em parte; o limite é da fonte. Por isso:
   **onde existe foto do destino, usa-se foto.** Frame entra quando não há foto da cena —
@@ -166,9 +177,42 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
 
 Nunca misturar os dois na mesma peça.
 
-## Acervo de fotos
+## Acervo de imagem — ordem de busca e tratamento
 
-`H:\Destinos`, `Y:\numpulo\Destinos`, legado em `D:\Projeto Num Pulo\Cidades` — e pode procurar em qualquer lugar. Dentro da pasta do destino normalmente existe `fotografia`; priorizar fotos exportadas. Somente leitura. Sem índice próprio (decisão do Daniel se a busca virar gargalo).
+`H:\Destinos`, `Y:\numpulo\Destinos`, legado em `D:\Projeto Num Pulo\Cidades`.
+
+**Ordem de preferência, definida pelo Daniel em 2026-08-08. Não pular etapa: só
+descer um degrau quando o de cima não tiver a cena.**
+
+| # | Fonte | Onde | Tratamento |
+|---|---|---|---|
+| 1 | **Foto pronta** | `<destino>/Fotografia/` | **nenhum.** Já saiu tratada, só recomprime |
+| 2 | **Frame de vídeo** | `<destino>/Bruto */`, achado pelo `_index` | `cor --perfil bruto-canon` (C-Log3 → Rec709) |
+| 3 | **RAW da R6** (`.CR3`) | `<destino>/Bruto */Canon R6/` | `cor --perfil raw-canon` |
+| 3 | **Foto de iPhone** (`.heic`) | `<destino>/Bruto */iPhone */` | `cor --perfil iphone` |
+
+Frame de vídeo perde para foto sempre que houver foto da cena: vem de 16:9,
+sofre upscale de ~1,33× no 3:4 e não tem o micro-detalhe da foto.
+
+**RAW e HEIC entram no `cor` direto** — ele decodifica via ImageMagick (LibRaw e
+libheif embutidos, nenhuma instalação nova) em **16 bits**, e o tratamento cai
+sobre o RAW, nunca sobre um JPG derivado. Duas armadilhas pagas em 2026-08-08:
+`-auto-orient` é obrigatório (LibRaw entrega o sensor e o retrato sai deitado), e
+`raw({depth:'ushort'})` sozinho **não** preserva 16 bits — sem
+`toColourspace('rgb16')` o Sharp converte o pipeline para 8 e devolve o byte alto
+zerado (máximo 255 num arquivo que tem 65535).
+
+**Índice de fotos**: `render.mjs indexar-fotos <destino> [--descrever]` grava
+`<destino>/_index/fotos/index.{csv,json}` — mesmo padrão e mesma pasta do índice
+de vídeo do `edicao-num-pulo`, arquivo separado para não confundir foto com
+clipe. Campos: câmera, lente, data, resolução, orientação, GPS, e com
+`--descrever` também landmark, descrição, tags e contagem de rostos (via
+`claude -p`, com cache). **Ao encontrar uma pasta `Fotografia` ainda não
+indexada, indexar — não só para a demanda da vez.**
+
+**Exceção à regra 4** (acervo somente leitura), aberta pelo Daniel em 2026-08-08:
+`indexar-fotos` escreve em `<destino>/_index/fotos/` e em nenhum outro lugar.
+Nenhuma imagem do acervo é criada, movida ou alterada.
 
 ## Convenções não óbvias
 

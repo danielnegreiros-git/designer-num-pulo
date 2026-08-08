@@ -3,7 +3,7 @@
 // Capacidade nova vira subcomando aqui; dependência nova exige decisão do Daniel.
 import { chromium } from 'playwright'
 import sharp from 'sharp'
-import { resolve, extname, basename } from 'node:path'
+import { resolve, extname, basename, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, unlinkSync } from 'node:fs'
 import { execFileSync } from 'node:child_process'
@@ -15,12 +15,13 @@ const USO = `uso:
   node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
   node tools/render.mjs tratar <entrada> --out <saida.(png|jpg|webp)> [--largura N] [--altura N] [--qualidade 80]
   node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
-  node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube|hald.png>|--perfil bruto-canon] [--exposicao auto|off]
+  node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube|hald.png>|--perfil bruto-canon|raw-canon|iphone] [--exposicao auto|off]
                                       [--referencia <arq|pasta>] [--forca 0.7] [--preset <arq.xmp>] [--preset-forca 1]
                                       [--curva 0..1] [--saturacao 1] [--nitidez 0..5] [--qualidade 92]
   node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
   node tools/render.mjs rostos <imagem> [--forcar]              # detecta rosto e grava .rostos.json
   node tools/render.mjs checar <fonte.html> [--minimo 0.06]     # texto sobre rosto, no slide renderizado
+  node tools/render.mjs indexar-fotos <pasta-do-destino> [--pasta Fotografia] [--descrever] [--out <dir>]
   node tools/render.mjs hald --out <identity.png> [--nivel 8]   # gera identity para trazer look do Lightroom
   node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--limiar 100] [--alcance 80] [--mapa "escala,dx,dy"]
                                             [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]   # borda ocluída: restrinja o trecho
@@ -41,6 +42,7 @@ const FLAGS_PERMITIDAS = {
   hald: ['out', 'nivel'],
   rostos: ['forcar', 'cache'],
   checar: ['largura', 'altura', 'minimo', 'cache'],
+  'indexar-fotos': ['pasta', 'out', 'descrever'],
   'medir-tela': ['regiao', 'limiar', 'mapa', 'alcance', 'esq', 'dir', 'topo', 'fundo'],
   contorno: ['quad', 'out', 'escala', 'zona'],
   info: [],
@@ -55,8 +57,8 @@ function lerArgs(argv, comando) {
     if (a.startsWith('--')) {
       const nome = a.slice(2)
       if (!permitidas.includes(nome)) sairUso(`flag desconhecida: ${a}`)
-      if (nome === 'pagina-inteira' || nome === 'forcar') {
-        op[nome === 'forcar' ? 'forcar' : 'paginaInteira'] = true
+      if (['pagina-inteira', 'forcar', 'descrever'].includes(nome)) {
+        op[nome === 'pagina-inteira' ? 'paginaInteira' : nome] = true
         continue
       }
       const v = argv[++i]
@@ -313,7 +315,10 @@ async function contorno(pos, op) {
 // cinco fotos aprovadas da peça de carrossel. Alvo do modo `--saturacao auto`.
 const ALVO_SATURACAO = 26
 
+// Quatro fontes de imagem, quatro tratamentos. A ordem de preferência de fonte
+// está no CLAUDE.md; aqui ficam só as receitas.
 const PERFIS = {
+  // Frame de vídeo da R6: C-Log3 → Rec709 pelo LUT da câmera.
   'bruto-canon': {
     lut: 'assets/luts/canon-log3-rec709.cube',
     exposicao: 'auto',
@@ -321,6 +326,47 @@ const PERFIS = {
     saturacao: 'auto',
     nitidez: 2.4,
   },
+  // RAW da R6 (.CR3): LibRaw revela neutro e o preset do Daniel entra em força
+  // cheia — foi desenhado exatamente para este ponto do fluxo. Sem `--preset`,
+  // cai numa revelação sóbria e o resto é igual aos outros perfis.
+  'raw-canon': {
+    exposicao: 'auto',
+    curva: 0.25,
+    saturacao: 'auto',
+    nitidez: 1.8,
+  },
+  // iPhone (.heic/.jpg da pasta Bruto): já vem revelado e com HDR agressivo da
+  // Apple — meio-tom levantado e cor puxada. Não leva curva nem saturação por
+  // cima; leva casamento com as fotos exportadas do destino, que é o padrão do
+  // canal, e sharpen leve para casar com a nitidez das exportadas.
+  'iphone': {
+    exposicao: 'off',
+    curva: 0,
+    saturacao: 'auto',
+    nitidez: 1.0,
+  },
+}
+
+// Formatos que o Sharp não decodifica e o ImageMagick sim (LibRaw e libheif já
+// vêm embutidos no build instalado, verificado em 2026-08-08 — nenhuma
+// dependência nova). `-auto-orient` é obrigatório: LibRaw entrega o sensor na
+// orientação física e o retrato sai deitado.
+const EXT_VIA_MAGICK = new Set(['.cr3', '.cr2', '.nef', '.arw', '.raf', '.rw2', '.dng', '.heic', '.heif'])
+
+// Decodifica em 16 BITS. O CR3 da R6 tem 14 bits de latitude, e é justamente
+// essa latitude que sustenta recuperação de alta e abertura de sombra. Passar
+// por 8 bits antes de tratar joga fora o que se quer usar — o tratamento tem
+// que cair sobre o RAW, não sobre um derivado já achatado.
+function decodificarSePreciso(entrada) {
+  const ext = extname(entrada).toLowerCase()
+  if (!EXT_VIA_MAGICK.has(ext)) return { arquivo: entrada, temporario: null, bits: 8 }
+  const saida = resolve(tmpdir(), `np-decod-${createHash('sha1').update(resolve(entrada)).digest('hex').slice(0, 12)}.png`)
+  try {
+    execFileSync('magick', [entrada, '-auto-orient', '-colorspace', 'sRGB', '-depth', '16', saida], { stdio: 'pipe' })
+  } catch (e) {
+    throw new Error(`magick não decodificou ${ext}: ${e.message}. Confira 'magick -version' (precisa dos delegates raw e heic).`)
+  }
+  return { arquivo: saida, temporario: saida, bits: 16 }
 }
 
 // ── preset do Lightroom (.xmp) ──────────────────────────────────────────────
@@ -716,7 +762,11 @@ async function cor(pos, op) {
   if (op.perfil) {
     const p = PERFIS[op.perfil]
     if (!p) sairUso(`perfil desconhecido: ${op.perfil} (tem: ${Object.keys(PERFIS).join(', ')})`)
-    caminhoLut = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', p.lut)
+    // Nem todo perfil tem LUT: só o frame de vídeo precisa converter curva de
+    // câmera. RAW e iPhone chegam já em espaço de exibição.
+    if (p.lut) {
+      caminhoLut = resolve(dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), '..', p.lut)
+    }
     exposicao = exposicao ?? p.exposicao
   }
   exposicao = exposicao ?? 'off'
@@ -732,24 +782,43 @@ async function cor(pos, op) {
   const qualidade = inteiro(op, 'qualidade', 92)
   garantirPasta(op.out)
 
-  const { data, info: meta } = await sharp(entrada).raw().toBuffer({ resolveWithObject: true })
+  const decod = decodificarSePreciso(entrada)
+  // `raw({depth:'ushort'})` sozinho NÃO preserva 16 bits: o Sharp converte o
+  // pipeline para 8 bits e só o container sai com 2 bytes, com o byte alto
+  // zerado (média 201, máximo 255 num arquivo que tem 65535). É preciso pedir
+  // `toColourspace('rgb16')` para o pipeline inteiro ficar em 16.
+  const bruto16 = decod.bits === 16
+  let entradaSharp = sharp(decod.arquivo)
+  if (bruto16) entradaSharp = entradaSharp.toColourspace('rgb16')
+  const { data, info: meta } = await entradaSharp
+    .raw(bruto16 ? { depth: 'ushort' } : {})
+    .toBuffer({ resolveWithObject: true })
+  if (decod.temporario) unlinkSync(decod.temporario)
   const { width: W, height: H, channels: C } = meta
   const total = W * H
   const aplicado = []
+  if (decod.temporario) {
+    aplicado.push({ etapa: 'decodificacao', via: 'magick', formato: extname(entrada).toLowerCase(), bits: decod.bits })
+  }
 
   // O pipeline inteiro roda em float e quantiza UMA vez, no fim. Em 8 bits, seis
   // transformações empilhadas (LUT, níveis, tonalidade, contraste, curva, HSL)
   // arredondam seis vezes e o céu do fim de tarde vira faixa de cor. Erro pago
   // em 2026-08-08, na primeira aplicação do preset.
+  // Tudo trabalha na escala 0–255 em float, venha de 8 ou de 16 bits. Vindo de
+  // 16, a divisão por 257 preserva as casas decimais — a latitude continua lá,
+  // ela só deixa de ser inteira.
+  const fonte = bruto16 ? new Uint16Array(data.buffer, data.byteOffset, data.length / 2) : data
+  const escala = bruto16 ? 1 / 257 : 1
   const buf = new Float32Array(total * 3)
   for (let i = 0; i < total; i++) {
     const o = i * C
-    buf[i * 3] = data[o]
-    buf[i * 3 + 1] = data[o + 1]
-    buf[i * 3 + 2] = data[o + 2]
+    buf[i * 3] = fonte[o] * escala
+    buf[i * 3 + 1] = fonte[o + 1] * escala
+    buf[i * 3 + 2] = fonte[o + 2] * escala
   }
   const alfa = C === 4 ? new Uint8Array(total) : null
-  if (alfa) for (let i = 0; i < total; i++) alfa[i] = data[i * C + 3]
+  if (alfa) for (let i = 0; i < total; i++) alfa[i] = Math.round(fonte[i * C + 3] * escala)
 
   // Níveis por percentil sobre a luminância: 0,3% de clip em cada ponta.
   const normalizarNiveis = () => {
@@ -1003,6 +1072,131 @@ async function rostos(pos, op) {
   const saida = { rostos: validos, zonaProibida: zona, folga: FOLGA }
   writeFileSync(cache, JSON.stringify(saida, null, 2))
   console.log(JSON.stringify({ ok: true, imagem: entrada, origem: 'deteccao', cache, ...saida }))
+}
+
+// ── indexar-fotos ───────────────────────────────────────────────────────────
+// Espelha, para foto, o índice que o `edicao-num-pulo` mantém para vídeo. Mesma
+// pasta `_index` do destino, arquivo separado (`_index/fotos/`) para não haver
+// dúvida sobre o que é foto e o que é clipe.
+//
+// ATENÇÃO: escreve no acervo. A regra 4 do CLAUDE.md é "acervo somente leitura";
+// o Daniel abriu esta exceção em 2026-08-08, restrita a `_index/fotos/`. Nada
+// fora dessa pasta é criado, movido ou alterado.
+const EXT_FOTO = new Set(['.jpg', '.jpeg', '.png', '.heic', '.heif', '.tif', '.tiff', '.webp', '.cr3', '.cr2', '.dng', '.arw', '.nef'])
+
+function lerExif(arquivos) {
+  const lote = execFileSync('exiftool', [
+    '-json', '-charset', 'filename=utf8', '-n',
+    '-Model', '-LensModel', '-DateTimeOriginal', '-CreateDate',
+    '-ImageWidth', '-ImageHeight', '-Orientation', '-GPSLatitude', '-GPSLongitude',
+    ...arquivos,
+  ], { encoding: 'utf8', maxBuffer: 1 << 28 })
+  return JSON.parse(lote)
+}
+
+async function indexarFotos(pos, op) {
+  const [destino] = pos
+  if (!destino) sairUso('indexar-fotos exige <pasta-do-destino>')
+  if (!existsSync(destino)) sairUso(`destino não existe: ${destino}`)
+  const subpasta = op.pasta || 'Fotografia'
+  const raiz = resolve(destino, subpasta)
+  if (!existsSync(raiz)) sairUso(`sem pasta ${subpasta} em ${destino} — passe --pasta se o nome for outro`)
+
+  const arquivos = []
+  const varrer = (dir) => {
+    for (const nome of readdirSync(dir)) {
+      const alvo = resolve(dir, nome)
+      if (statSync(alvo).isDirectory()) varrer(alvo)
+      else if (EXT_FOTO.has(extname(nome).toLowerCase())) arquivos.push(alvo)
+    }
+  }
+  varrer(raiz)
+  if (!arquivos.length) sairUso(`nenhuma foto em ${raiz}`)
+
+  const exif = lerExif(arquivos)
+  const porArquivo = new Map(exif.map((e) => [resolve(e.SourceFile), e]))
+  const nomeDestino = basename(resolve(destino))
+
+  const saidaDir = op.out ? resolve(op.out) : resolve(destino, '_index', 'fotos')
+  mkdirSync(saidaDir, { recursive: true })
+  const cacheDir = resolve(saidaDir, '.descricoes')
+  if (op.descrever) mkdirSync(cacheDir, { recursive: true })
+
+  const registros = []
+  for (const arq of arquivos) {
+    const e = porArquivo.get(arq) || {}
+    const largura = e.ImageWidth ?? null
+    const altura = e.ImageHeight ?? null
+    const reg = {
+      caminho: arq,
+      destino: nomeDestino,
+      pasta: relative(raiz, dirname(arq)) || '.',
+      arquivo: basename(arq),
+      camera: e.Model || '',
+      lente: e.LensModel || '',
+      recorded_date: e.DateTimeOriginal || e.CreateDate || '',
+      formato: extname(arq).slice(1).toLowerCase(),
+      resolucao: largura && altura ? `${largura}x${altura}` : '',
+      orientacao: largura && altura ? (largura >= altura ? 'paisagem' : 'retrato') : '',
+      megapixels: largura && altura ? +((largura * altura) / 1e6).toFixed(1) : null,
+      lat: e.GPSLatitude ?? null,
+      lon: e.GPSLongitude ?? null,
+      landmark: '',
+      descricao: '',
+      tags: [],
+      rostos: null,
+    }
+
+    if (op.descrever) {
+      const hash = createHash('sha1').update(arq).digest('hex').slice(0, 16)
+      const cache = resolve(cacheDir, `${hash}.json`)
+      let visto
+      if (existsSync(cache)) {
+        visto = JSON.parse(readFileSync(cache, 'utf8'))
+      } else {
+        const reduzida = resolve(tmpdir(), `np-idx-${hash}.jpg`)
+        const decod = decodificarSePreciso(arq)
+        await sharp(decod.arquivo).rotate().resize(900, null, { fit: 'inside' }).jpeg({ quality: 82 }).toFile(reduzida)
+        if (decod.temporario) unlinkSync(decod.temporario)
+        const prompt = `Leia a imagem ${reduzida} e responda SO com JSON, sem texto antes ou depois: {"descricao":"...","landmark":"...","tags":["..."],"rostos":0}. descricao: uma frase objetiva do que aparece, em portugues, como legenda de acervo (sem juizo de valor, sem adjetivo de propaganda). landmark: nome do ponto turistico ou lugar reconhecivel, ou "" se nao houver. tags: 2 a 5 palavras curtas (ex: externo, comida, arquitetura, retrato, praia, noite). rostos: quantas pessoas tem rosto com feicoes visiveis.`
+        const viaCmd = process.platform === 'win32'
+        const bruto = execFileSync(
+          viaCmd ? 'cmd' : 'claude',
+          viaCmd ? ['/c', 'claude', '-p', '--allowedTools', 'Read'] : ['-p', '--allowedTools', 'Read'],
+          { input: prompt, encoding: 'utf8', maxBuffer: 1 << 20 },
+        )
+        unlinkSync(reduzida)
+        const casado = bruto.match(/\{[\s\S]*\}/)
+        visto = casado ? JSON.parse(casado[0]) : { descricao: '', landmark: '', tags: [], rostos: null }
+        writeFileSync(cache, JSON.stringify(visto))
+      }
+      reg.descricao = visto.descricao || ''
+      reg.landmark = visto.landmark || ''
+      reg.tags = Array.isArray(visto.tags) ? visto.tags : []
+      reg.rostos = Number.isFinite(visto.rostos) ? visto.rostos : null
+      process.stderr.write(`. ${reg.arquivo}\n`)
+    }
+    registros.push(reg)
+  }
+
+  const colunas = ['caminho', 'destino', 'pasta', 'arquivo', 'camera', 'lente', 'recorded_date',
+    'formato', 'resolucao', 'orientacao', 'megapixels', 'lat', 'lon', 'landmark', 'descricao', 'tags', 'rostos']
+  const escapar = (v) => {
+    const s = Array.isArray(v) ? v.join(', ') : v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  const csv = [colunas.join(','), ...registros.map((r) => colunas.map((c) => escapar(r[c])).join(','))].join('\n')
+  writeFileSync(resolve(saidaDir, 'index.csv'), csv, 'utf8')
+  writeFileSync(resolve(saidaDir, 'index.json'), JSON.stringify(registros, null, 1), 'utf8')
+
+  console.log(JSON.stringify({
+    ok: true,
+    destino: nomeDestino,
+    pastaLida: raiz,
+    fotos: registros.length,
+    comDescricao: registros.filter((r) => r.descricao).length,
+    saida: [resolve(saidaDir, 'index.csv'), resolve(saidaDir, 'index.json')],
+  }))
 }
 
 // ── checar ──────────────────────────────────────────────────────────────────
@@ -1329,7 +1523,7 @@ async function info(pos) {
 }
 
 const [comando, ...resto] = process.argv.slice(2)
-const comandos = { render, tratar, recortar, cor, analisar, rostos, checar, hald: gerarHald, 'medir-tela': medirTela, contorno, info }
+const comandos = { render, tratar, recortar, cor, analisar, rostos, checar, 'indexar-fotos': indexarFotos, hald: gerarHald, 'medir-tela': medirTela, contorno, info }
 if (!comandos[comando]) sairUso(comando ? `comando desconhecido: ${comando}` : undefined)
 const { pos, op } = lerArgs(resto, comando)
 comandos[comando](pos, op).catch((e) => {
