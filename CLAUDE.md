@@ -45,7 +45,12 @@ Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` er
    2026-08-07 e o Daniel pegou. Em toda composição sobre foto (screen-em-device,
    recorte, máscara), recortar com `render.mjs recortar` cada canto/borda crítica do
    PNG final, **ampliar 3× com `tratar`** e inspecionar.
-5. **Coordenada em foto se mede com grade renderizada, nunca a olho.** A olho, mesmo
+5. **Coordenada em foto se mede com instrumento, nunca a olho.** Fronteira de alto
+   contraste (tela branca × bezel preto): **varredura programática de pixels** com
+   Sharp (`node -e`, raw buffer, limiar de brilho por linha/coluna) — é o método
+   mais preciso e o único que pega borda curva de imagem de IA; exemplo real no
+   `fonte.html` da peça `2026-08-07-cena-guia-landing`. Fronteira sem contraste
+   confiável: grade renderizada. A olho, mesmo
    em recorte 1:1, o erro passa de 20px e muda até o sinal da inclinação (pago duas
    vezes em 2026-08-07, na mesma peça). Método que funciona: HTML de diagnóstico com
    a imagem 1:1 + grade de 16px (maior a cada 80px) por cima — modelo em
