@@ -129,7 +129,7 @@ Regra de bolso:
 - Consultar quem faz o quê: `node C:\Dev\gerente-num-pulo\dist\cli.js registro`.
 - Avaliar quem quebra se um entregável mudar: `node C:\Dev\gerente-num-pulo\dist\cli.js impacto <entregavel>`.
 
-Demandas destinadas a este worker aparecem no início da sessão (hook `SessionStart`). Fechar: `demanda fechar <id> --status concluida --resposta "..."` — e depois de fechar, ligar o vigia (`demanda vigiar`) em segundo plano, sem esperar o Daniel pedir. Template consumido por outro worker vira `entregavel declarar` na mesma sessão do commit.
+Demandas destinadas a este worker aparecem no início da sessão (hook `SessionStart`). Fechar: `demanda fechar <id> --status concluida --resposta "..."` — e depois de fechar, checar o barramento com `demanda vigiar --desde <iso8601>`, sem esperar o Daniel pedir. **`vigiar` é consulta pontual, não daemon**: `--desde` é obrigatório e ele reporta movimentação de fora (chegadas, fechamentos e recados de outros), não as próprias ações. Rodar em segundo plano não serve para nada. Template consumido por outro worker vira `entregavel declarar` na mesma sessão do commit.
 
 ## Comunicação
 
