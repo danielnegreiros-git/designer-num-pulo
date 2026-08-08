@@ -9,25 +9,37 @@ Fase 0 concluída e primeira demanda de outro worker entregue.
 Peças em `biblioteca/pecas/2026/`:
 
 - `2026-08-07-mockup-guia-landing` e `2026-08-07-cena-guia-landing` — aprovadas pelo
-  Daniel, não publicadas. Ele vai planejar as demais imagens do Guia e trocar tudo de
-  uma vez. Sem demanda aberta para o `guia`.
+  Daniel, não publicadas. Ele planeja as demais imagens do Guia e troca tudo de uma vez.
 - `2026-08-07-carrossel-madri-ou-barcelona` — primeiro carrossel, 10 slides, demanda
-  1103 do `socialmedia`, publica 09/08. Duas rodadas de calibração do Daniel já
-  aplicadas. Entregue em `saida/*.jpg`, aguardando aprovação final.
+  1103 do `socialmedia`, publica 09/08. **Quatro rodadas de calibração do Daniel**
+  aplicadas (diagramação, cor, troca de frame por foto, texto sobre rosto). Entregue em
+  `saida/*.jpg`, aguardando aprovação final.
 
-Templates: `mockup-tela-em-cena/` e **`carrossel-foto-sangrada/`** (este promovido na
-primeira ocorrência, por decisão do Daniel, e declarado no registro do barramento).
+Templates: `mockup-tela-em-cena/` e `carrossel-foto-sangrada/`.
 
-## Aprendido e mecanizado
+## O que este worker sabe fazer agora
 
-- Tela em aparelho: `render.mjs medir-tela` e `contorno`, `assets/composicao.js` com
-  inset anti-serrilhado, raio do vidro e oclusão, render supersampled.
-- Carrossel: padrão do Gramado medido por grade, virou template + CLAUDE.md.
-- **Cor de frame de bruto: `render.mjs cor`.** C-Log3 → LUT da câmera → casamento com
-  as fotos exportadas do destino → exposição → curva S → saturação por alvo → sharpen.
-- **Posicionamento de texto: `render.mjs analisar`.** Âncora e scrim por medição, com
-  scrim calculado por brilho e por detalhe.
-- **`render.mjs hald`**: ponte para trazer look do Lightroom como tabela de cor.
+Tudo em `tools/render.mjs`, tudo medido em vez de julgado a olho:
+
+- **Peça**: `render`, `recortar`, `tratar` — HTML → quadros da entrega.
+- **Cor por fonte**: `cor --perfil bruto-canon|raw-canon|iphone`. Pipeline em float,
+  quantização única com dither. RAW e HEIC decodificados via ImageMagick em 16 bits.
+- **Diagramação medida**: `analisar` (âncora, scrim por brilho e por detalhe),
+  `rostos` (via `claude -p`, cache por hash), `checar` (gate de texto sobre rosto no
+  slide renderizado, chamado pelo `montar.ps1`).
+- **Acervo**: `indexar-fotos` — índice de foto espelhando o de vídeo do `edicao`.
+- **Composição**: `medir-tela`, `contorno`, `assets/composicao.js`.
+- **Ponte de look**: `hald` (HALD CLUT identity para trazer preset do Lightroom).
+
+Ordem de fonte de imagem e tratamento por fonte: CLAUDE.md, seção "Acervo de imagem".
+
+## Índices de foto já gerados
+
+- `H:\Destinos\Barcelona 2022\_index\fotos\` — 68 fotos, 57 com landmark
+- `H:\Destinos\Espanha Nomad 2025\_index\fotos\` — 10 fotos
+
+Regra: ao topar com uma pasta `Fotografia` ainda não indexada, indexar. Entregável
+declarado no registro; `edicao-num-pulo` avisado pela demanda 1104.
 
 ## Próximo passo
 
@@ -37,20 +49,21 @@ thumbnail de YouTube, e a primeira calibração da `num-pulo-brand-guidelines`.
 
 ## Situações em aberto
 
-- **Calibração da skill, pendente de decisão do Daniel.** O padrão Gramado diverge da
-  `num-pulo-brand-guidelines` em três pontos: formato de carrossel (3:4 contra o
-  1080×1080 da seção 10.2), escala tipográfica (título 96px / corpo 30px contra
-  36–48 / 15–16 da 13.3) e itálico do Instrument Serif em trecho, não em uma palavra
-  só (seção 2). Detalhe no `brief.md` da peça de carrossel. A skill não foi tocada.
-- **Look de cor, pendente do Daniel.** Se ele tiver preset de Lightroom que define o
-  look do canal, o caminho está pronto: `render.mjs hald --out identity.png`, ele
-  revela com o preset, e `cor --lut <revelado.png>` passa a ser o padrão no lugar do
-  casamento estatístico.
-- Plano do Daniel para o conjunto de imagens do Guia (a troca na /lista sai de uma
-  vez, via demanda para o `guia`).
+- **Calibração da skill, pendente do Daniel.** O padrão Gramado diverge da
+  `num-pulo-brand-guidelines` em três pontos: formato de carrossel (3:4 contra
+  1080×1080 da seção 10.2), escala tipográfica (96/30 contra 36–48/15–16 da 13.3) e
+  itálico em trecho, não em uma palavra (seção 2). A skill não foi tocada.
+- **Look de cor.** O Daniel vai exportar um HALD revelado com o preset dele; o
+  identity está em `presets-luts/hald-identity-nivel8.png` e os frames de partida
+  (só LUT aplicado) em `presets-luts/so-lut-clog3-rec709/`. Enquanto não vem, frame
+  de vídeo casa estatisticamente com as fotos exportadas do destino.
+- **Camera Raw por COM, não implementado.** Photoshop 2024 responde
+  (`New-Object -ComObject Photoshop.Application`, versão 27.9.1) e o ACR lê `.xmp`
+  como sidecar do RAW. É a única rota fiel ao preset do Lightroom — `darktable-cli`
+  e `rawtherapee-cli` usam formato próprio e não leem preset do Adobe.
+- Plano do Daniel para o conjunto de imagens do Guia.
 - ComfyUI: endpoint e invocação, a levantar na primeira peça que precisar — para
   grade de cor não serve; o caso de uso é upscale, limpeza e imagery de apoio.
 - Fontes do projeto remoto no claude.ai/design caem em fallback. Projeto:
   `019e1dc1-2de2-7941-b801-4382556049d6`.
-- Acesso ao interior do Guia para screenshot depende de sessão logada do Daniel no
-  Chromium do Playwright (trava de pré-lançamento).
+- Acesso ao interior do Guia para screenshot depende de sessão logada do Daniel.

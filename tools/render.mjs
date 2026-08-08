@@ -1127,6 +1127,11 @@ async function indexarFotos(pos, op) {
     const e = porArquivo.get(arq) || {}
     const largura = e.ImageWidth ?? null
     const altura = e.ImageHeight ?? null
+    // Derivado: versão reduzida ou recorte feito para outro uso. Fica no índice
+    // (é rastro), mas marcado, para peça não escolher a cópia pequena por acaso.
+    const relativo = relative(raiz, arq).toLowerCase()
+    const derivado = /(^|[\\/])(reduzida|para o video|thumbs?)([\\/]|$)/.test(relativo)
+      || /_reduzida|_pequena|-small|\.jpg\.png$/.test(basename(arq).toLowerCase())
     const reg = {
       caminho: arq,
       destino: nomeDestino,
@@ -1139,6 +1144,7 @@ async function indexarFotos(pos, op) {
       resolucao: largura && altura ? `${largura}x${altura}` : '',
       orientacao: largura && altura ? (largura >= altura ? 'paisagem' : 'retrato') : '',
       megapixels: largura && altura ? +((largura * altura) / 1e6).toFixed(1) : null,
+      derivado,
       lat: e.GPSLatitude ?? null,
       lon: e.GPSLongitude ?? null,
       landmark: '',
@@ -1180,7 +1186,7 @@ async function indexarFotos(pos, op) {
   }
 
   const colunas = ['caminho', 'destino', 'pasta', 'arquivo', 'camera', 'lente', 'recorded_date',
-    'formato', 'resolucao', 'orientacao', 'megapixels', 'lat', 'lon', 'landmark', 'descricao', 'tags', 'rostos']
+    'formato', 'resolucao', 'orientacao', 'megapixels', 'derivado', 'lat', 'lon', 'landmark', 'descricao', 'tags', 'rostos']
   const escapar = (v) => {
     const s = Array.isArray(v) ? v.join(', ') : v === null || v === undefined ? '' : String(v)
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
