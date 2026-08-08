@@ -29,6 +29,7 @@ Peça nasce como **HTML estático + CSS** com os tokens de `design-system/tokens
 
     node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
     node tools/render.mjs tratar <entrada> --out <saida> [--largura N] [--altura N] [--qualidade 80]
+    node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
     node tools/render.mjs info <arquivo>
 
 Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` erro de uso (conserte a chamada), `1` falha de execução. Formato de `tratar` sai da extensão de `--out` (png/jpg/webp).
@@ -38,6 +39,13 @@ Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` er
 1. **Skills por momento**: `impeccable` antes do render de toda peça; `design-taste-frontend`/`frontend-design` em peça tipo landing/apresentação; `dataviz` em qualquer gráfico.
 2. **Gate do brandguide**: checklist da seção 9 de `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md` antes de toda entrega.
 3. **Auto-inspeção**: ler o PNG renderizado (tool Read) e auditar contra o brief antes de mostrar ao Daniel.
+4. **Inspeção de junção é por recorte 1:1, nunca no quadro inteiro.** O Read mostra a
+   peça reduzida: vazamento de 10-30px (tela fora do device, borda sobre bezel,
+   emenda de composição) fica invisível — foi assim que uma peça saiu errada em
+   2026-08-07 e o Daniel pegou. Em toda composição sobre foto (screen-em-device,
+   recorte, máscara), recortar com `render.mjs recortar` cada canto/borda crítica do
+   PNG final e inspecionar os recortes. Medição de cantos na imagem base também é
+   por recorte 1:1; estimativa a olho no quadro inteiro erra por dezenas de pixels.
 
 ## Dois sistemas visuais — roteamento
 

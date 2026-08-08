@@ -11,6 +11,7 @@ import { dirname } from 'node:path'
 const USO = `uso:
   node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
   node tools/render.mjs tratar <entrada> --out <saida.(png|jpg|webp)> [--largura N] [--altura N] [--qualidade 80]
+  node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
   node tools/render.mjs info <arquivo>`
 
 function sairUso(msg) {
@@ -21,6 +22,7 @@ function sairUso(msg) {
 const FLAGS_PERMITIDAS = {
   render: ['largura', 'altura', 'escala', 'out', 'pagina-inteira'],
   tratar: ['largura', 'altura', 'qualidade', 'out'],
+  recortar: ['x', 'y', 'largura', 'altura', 'out'],
   info: [],
 }
 
@@ -99,6 +101,31 @@ async function tratar(pos, op) {
   console.log(JSON.stringify({ ok: true, saida: op.out, largura: r.width, altura: r.height, bytes: r.size }))
 }
 
+async function recortar(pos, op) {
+  const [entrada] = pos
+  if (!entrada || !op.out) sairUso('recortar exige <entrada> e --out')
+  if (!existsSync(entrada)) sairUso(`arquivo não existe: ${entrada}`)
+  for (const n of ['x', 'y', 'largura', 'altura']) {
+    if (op[n] === undefined) sairUso(`recortar exige --${n}`)
+  }
+  garantirPasta(op.out)
+  const r = await sharp(entrada)
+    .extract({
+      left: inteiroOuZero(op, 'x'),
+      top: inteiroOuZero(op, 'y'),
+      width: inteiro(op, 'largura'),
+      height: inteiro(op, 'altura'),
+    })
+    .toFile(op.out)
+  console.log(JSON.stringify({ ok: true, saida: op.out, largura: r.width, altura: r.height }))
+}
+
+function inteiroOuZero(op, nome) {
+  const n = Number(op[nome])
+  if (!Number.isInteger(n) || n < 0) sairUso(`--${nome} deve ser inteiro >= 0`)
+  return n
+}
+
 async function info(pos) {
   const [arquivo] = pos
   if (!arquivo) sairUso('info exige <arquivo>')
@@ -108,7 +135,7 @@ async function info(pos) {
 }
 
 const [comando, ...resto] = process.argv.slice(2)
-const comandos = { render, tratar, info }
+const comandos = { render, tratar, recortar, info }
 if (!comandos[comando]) sairUso(comando ? `comando desconhecido: ${comando}` : undefined)
 const { pos, op } = lerArgs(resto, comando)
 comandos[comando](pos, op).catch((e) => {
