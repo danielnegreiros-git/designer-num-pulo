@@ -61,11 +61,35 @@ Acervo somente leitura. Nada gerado por IA, nenhuma paisagem inventada.
 Frames localizados pelo `_index` de `H:\Destinos\Espanha Nomad 2025\_index\{madrid,barcelona}\index.csv`
 (busca por landmark e descrição), extraídos no meio do clipe com `ffmpeg`.
 
-**Frame de vídeo sai em log e não pode ir cru para a peça.** O bruto da Canon R6 é
-desbotado e cinza ao lado das fotos exportadas; colado assim, o carrossel fica com dois
-padrões de cor. Grade aplicado na extração, validado contra as fotos tratadas:
+Tudo reproduzível por `preparar-imagens.ps1`, que reconstrói `imagens/` do zero a partir
+do acervo e imprime a análise de âncora e scrim de cada arquivo.
 
-    -vf "eq=contrast=1.45:saturation=1.55:gamma=0.95,curves=all='0/0 0.2/0.14 0.5/0.52 0.8/0.86 1/1'"
+**Frame de vídeo sai em C-Log3 e não pode ir cru para a peça.** O bruto da Canon R6 é
+desbotado e cinza ao lado das fotos exportadas; colado assim, o carrossel fica com dois
+padrões de cor. Conversão pelo LUT da curva da câmera mais casamento com as fotos
+exportadas da mesma viagem, que são o padrão de cor aprovado:
+
+    node tools/render.mjs cor <frame> --out <saida> --perfil bruto-canon \
+      --referencia <pasta de fotos exportadas do destino> --forca 0.5
+
+## Posicionamento de texto e scrim, por medição
+
+`render.mjs analisar <imagem> --grade 3x4` devolve por faixa: brilho, detalhe,
+concentração de pele e o scrim que o branco precisa para bater contraste 4,5. Cada slide
+recebe esse número em `--scrim`. Valores usados:
+
+| Slide | Âncora | `--scrim` | Por quê |
+|---|---|---|---|
+| 01 | centro + rodapé | .70 | split, faixa clara nas duas metades |
+| 02 | rodapé | .39 | calçada limpa, detalhe 24 |
+| 03 | rodapé | .55 | fachada com detalhe 55 — brilho sozinho pedia .17 e não lia |
+| 04 | rodapé | .54 | vitrine acesa atrás |
+| 05 | rodapé | .20 | fachada preta; âncora no rodapé porque o rosto está no meio |
+| 06 | rodapé | .65 | banca de frutas, detalhe 48 |
+| 07 | topo | .37 | mesa clara embaixo |
+| 08 | rodapé | .30 | interior escuro |
+| 09 | rodapé | .55 | split |
+| 10 | rodapé | .65 | prédio claro e selfie |
 
 ## Como montar
 
@@ -89,6 +113,22 @@ em três pontos. A skill não foi alterada; a decisão é dele.
    real, normalizado para 1080 de largura, é título 96px e corpo 30px.
 3. **Itálico.** A skill (seção 2) restringe o itálico do Instrument Serif a uma palavra.
    O padrão real usa trecho de duas ou três palavras, e às vezes a linha inteira.
+
+## Calibração do Daniel, 2026-08-08 (rodada 1)
+
+Três apontamentos dele sobre a v1, todos corrigidos:
+
+1. **Slide 5, texto na cara da Paula.** O bloco no topo encostava na cabeça dela. A
+   análise mostra o rosto no terço central (pele 5,1× a média da foto), então o bloco foi
+   para o rodapé, onde cai sobre a saia e a calçada.
+2. **Slide 3, título sem leitura sobre imagem complexa.** Confirmado por medição: a faixa
+   pedia scrim .17 por brilho, mas .55 por detalhe (fachada da Casa Batlló, desvio 55).
+   Além disso o gradiente entregava metade do valor na primeira linha do título — agora o
+   scrim fica cheio ao longo de todo o bloco e só decai acima dele.
+3. **Fotos sem tratamento.** Frame de bruto passa pelo LUT da câmera e casa com as fotos
+   exportadas do destino. O que era grade chutado virou `render.mjs cor`.
+
+Aprovado por ele na mesma rodada: diagramação, marcador de cidade e o split.
 
 ## Pendências
 

@@ -30,6 +30,9 @@ Peça nasce como **HTML estático + CSS** com os tokens de `design-system/tokens
     node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
     node tools/render.mjs tratar <entrada> --out <saida> [--largura N] [--altura N] [--qualidade 80]
     node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
+    node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube>|--perfil bruto-canon]
+                                        [--exposicao auto|off] [--referencia <arq|pasta>] [--forca 0.7]
+    node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
     node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--alcance 80] [--limiar 100] [--mapa "escala,dx,dy"]
                                               [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]
     node tools/render.mjs contorno <imagem> --quad "x,y x,y x,y x,y" --out <pasta> [--escala 1] [--zona 200]
@@ -88,14 +91,35 @@ Peça de origem no repo: `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-ba
 
 ## Foto do acervo em peça
 
-- **Frame de vídeo sai em log** (Canon R6). Cru ao lado de foto exportada, a peça fica com
-  dois padrões de cor. Grade na extração, validado em 2026-08-08:
-  `-vf "eq=contrast=1.45:saturation=1.55:gamma=0.95,curves=all='0/0 0.2/0.14 0.5/0.52 0.8/0.86 1/1'"`
+- **Frame de vídeo sai em C-Log3** (Canon R6). Cru ao lado de foto exportada, a peça fica
+  com dois padrões de cor. A conversão é pelo **LUT da curva da câmera**, não por ganho de
+  contraste chutado: `render.mjs cor <frame> --out X --perfil bruto-canon`
+  (`assets/luts/canon-log3-rec709.cube`, copiado do acervo de LUTs do Daniel).
+- **O padrão de cor do canal são as fotos exportadas do próprio destino.** Para o frame
+  casar com elas na mesma peça, somar `--referencia <pasta com as fotos> --forca 0.5`
+  (casamento estatístico por canal). Ordem fixa e não negociável dentro do comando:
+  LUT → referência → exposição → saturação. Fora dessa ordem o LUT recebe entrada que não
+  é log e devolve cor errada.
+- **Onde o texto vai numa foto é medição, não olho:** `render.mjs analisar <imagem>` devolve,
+  por faixa, brilho, detalhe, concentração de pele e o **scrim** necessário para o branco
+  bater contraste 4,5. O slide usa esse número em `--scrim`; vinheta chutada falhou em
+  2026-08-08 em dois slides.
+  - Scrim se calcula por brilho **e por detalhe**. Faixa escura na média mas cheia de
+    padrão (fachada da Casa Batlló, detalhe 55) mata texto branco do mesmo jeito.
+  - O gradiente mantém o scrim **cheio ao longo de todo o bloco de texto** e só decai
+    acima dele. Gradiente que começa a cair na base entrega metade do valor medido na
+    primeira linha do título.
+  - **Pele é sinal, não veto.** Fruta, tijolo e parede ocre entram na faixa de pele; o que
+    denuncia rosto é a faixa concentrar pele acima da média da própria foto (≥1,6×). Com
+    alerta, ler a imagem antes de fixar a âncora.
 - **Achar o frame pelo índice, não abrindo vídeo**: destinos indexados pelo `edicao-num-pulo`
   têm `_index/<cidade>/index.csv`, uma linha por clipe com `landmark`, `descricao`, `plano`,
   `classe` (broll/fala) e caminho. Busca por texto chega direto no clipe.
 - Escolha de imagem se faz em **contact sheet**, não abrindo arquivo por arquivo: gerar HTML
-  em grade com as candidatas e renderizar (ver `montar.ps1` e o brief da peça de carrossel).
+  em grade com as candidatas e renderizar.
+- Peça com foto do acervo leva um **`preparar-imagens.ps1`** que reconstrói `imagens/` do
+  zero: origem exata de cada arquivo, tratamento aplicado e a análise que definiu âncora e
+  scrim. Modelo em `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`.
 
 ## Dois sistemas visuais — roteamento
 
