@@ -335,16 +335,35 @@ const PERFIS = {
     saturacao: 'auto',
     nitidez: 1.8,
   },
-  // iPhone (.heic/.jpg da pasta Bruto): já vem revelado e com HDR agressivo da
-  // Apple — meio-tom levantado e cor puxada. Não leva curva nem saturação por
-  // cima; leva casamento com as fotos exportadas do destino, que é o padrão do
-  // canal, e sharpen leve para casar com a nitidez das exportadas.
+  // iPhone. Dois bichos diferentes sob o mesmo nome, medidos em 2026-08-08
+  // contra as fotos exportadas do canal (alvo: contraste ~58, saturação ~30,
+  // nitidez ~18):
+  //
+  //   .heic/.jpg  já sai revelado pela Apple — contraste 66, saturação 23,
+  //               nitidez 24. Contraste e nitidez JÁ passam do alvo (é o Smart
+  //               HDR e o sharpening da câmera). Só falta cor. Somar curva ou
+  //               sharpen aqui empilha halo em cima do que a Apple já fez.
+  //   .dng        ProRAW cru sai lavado — contraste 48, saturação 27, nitidez
+  //               13. Precisa de tudo, como qualquer RAW.
+  //
+  // O perfil escolhe a variante pela extensão: quem monta peça não precisa
+  // saber de qual botão do iPhone a foto veio.
   'iphone': {
-    exposicao: 'off',
+    exposicao: 'auto',
     curva: 0,
     saturacao: 'auto',
-    nitidez: 1.0,
+    nitidez: 0,
+    variantePorExtensao: {
+      '.dng': { exposicao: 'auto', curva: 0.15, saturacao: 'auto', nitidez: 1.4 },
+    },
   },
+}
+
+function resolverPerfil(nome, entrada) {
+  const base = PERFIS[nome]
+  if (!base) return null
+  const variante = base.variantePorExtensao?.[extname(entrada).toLowerCase()]
+  return variante ? { ...base, ...variante } : base
 }
 
 // Formatos que o Sharp não decodifica e o ImageMagick sim (LibRaw e libheif já
@@ -760,7 +779,7 @@ async function cor(pos, op) {
   let caminhoLut = op.lut
   let exposicao = op.exposicao
   if (op.perfil) {
-    const p = PERFIS[op.perfil]
+    const p = resolverPerfil(op.perfil, entrada)
     if (!p) sairUso(`perfil desconhecido: ${op.perfil} (tem: ${Object.keys(PERFIS).join(', ')})`)
     // Nem todo perfil tem LUT: só o frame de vídeo precisa converter curva de
     // câmera. RAW e iPhone chegam já em espaço de exibição.
@@ -773,7 +792,7 @@ async function cor(pos, op) {
   if (!['auto', 'off'].includes(exposicao)) sairUso('--exposicao aceita auto ou off')
   const forca = numero(op, 'forca', 0.7)
   if (forca < 0 || forca > 1) sairUso('--forca entre 0 e 1')
-  const perfil = op.perfil ? PERFIS[op.perfil] : {}
+  const perfil = op.perfil ? resolverPerfil(op.perfil, entrada) : {}
   const curva = numero(op, 'curva', perfil.curva ?? 0)
   if (curva < 0 || curva > 1) sairUso('--curva entre 0 e 1')
   const saturacao = op.saturacao === 'auto' ? 'auto' : numero(op, 'saturacao', perfil.saturacao ?? 1)

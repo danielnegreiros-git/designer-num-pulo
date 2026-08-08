@@ -188,11 +188,36 @@ descer um degrau quando o de cima não tiver a cena.**
 |---|---|---|---|
 | 1 | **Foto pronta** | `<destino>/Fotografia/` | **nenhum.** Já saiu tratada, só recomprime |
 | 2 | **Frame de vídeo** | `<destino>/Bruto */`, achado pelo `_index` | `cor --perfil bruto-canon` (C-Log3 → Rec709) |
-| 3 | **RAW da R6** (`.CR3`) | `<destino>/Bruto */Canon R6/` | `cor --perfil raw-canon` |
-| 3 | **Foto de iPhone** (`.heic`) | `<destino>/Bruto */iPhone */` | `cor --perfil iphone` |
+| 3 | **Foto de iPhone** (`.heic`, `.dng`) | `<destino>/Bruto */iPhone */` | `cor --perfil iphone` |
+| 4 | **RAW da R6** (`.CR3`) | `<destino>/Bruto */Canon R6/` | `cor --perfil raw-canon` |
 
 Frame de vídeo perde para foto sempre que houver foto da cena: vem de 16:9,
 sofre upscale de ~1,33× no 3:4 e não tem o micro-detalhe da foto.
+
+iPhone na frente do CR3 é decisão do Daniel (2026-08-08): o CR3 é material sem
+tratamento nenhum, e a foto de iPhone chega mais perto do padrão do canal com
+menos intervenção.
+
+### O que cada tratamento faz, e por quê
+
+Medido contra as fotos exportadas do canal (alvo: contraste ~58, saturação ~30,
+nitidez ~18 na escala do `analisar`):
+
+- **`bruto-canon`** — frame em C-Log3. LUT da câmera, curva S, saturação por
+  alvo e sharpen. Detalhe em "Foto do acervo em peça", abaixo.
+- **`iphone`** — **duas receitas sob um nome, escolhidas pela extensão**, porque
+  são materiais diferentes:
+  - `.heic`/`.jpg`: sai da Apple com contraste 66, saturação 23 e nitidez 24.
+    Contraste e nitidez **já passam do alvo** (Smart HDR + sharpening da câmera).
+    Só falta cor. Somar curva ou sharpen aqui empilha halo sobre o que a Apple já
+    fez — o perfil aplica níveis e saturação por alvo, e mais nada.
+  - `.dng` (ProRAW): sai cru e lavado, contraste 48 e nitidez 13. Leva curva
+    0,15, saturação por alvo e sharpen 1,4, e aí bate o alvo (62/32/18).
+- **`raw-canon`** — CR3. Revelação neutra do LibRaw em 16 bits, curva 0,25,
+  saturação por alvo, sharpen 1,8.
+
+Em qualquer um deles, somar `--referencia <pasta de fotos exportadas do destino>`
+casa a cor com o padrão aprovado. É o que aproxima material bruto de foto pronta.
 
 **RAW e HEIC entram no `cor` direto** — ele decodifica via ImageMagick (LibRaw e
 libheif embutidos, nenhuma instalação nova) em **16 bits**, e o tratamento cai
