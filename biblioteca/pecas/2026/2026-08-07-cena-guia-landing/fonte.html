@@ -20,7 +20,7 @@
     mask-composite: intersect;
   }
   .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: #F6F2EA; }
-  #tela-nb { width: 1363px; height: 832px; border-radius: 8px; }
+  #tela-nb { width: 1363px; height: 832px; border-radius: 26px; }
   #tela-nb img { display: block; width: 1363px; }
   #tela-ph { width: 137px; height: 284px; border-radius: 14px; }
   #tela-ph img { display: block; width: 145px; margin: -29px 0 0 -4px; }
@@ -84,21 +84,22 @@
     // Notebook: cantos por varredura de pixels da base (bordas do branco da tela),
     // com 2px de transbordo para encostar no bezel. TL, TR, BL, BR em 1200×800.
     const nb = document.getElementById('tela-nb');
-    const tNb = homografia(1363, 832, [429,235, 951,237, 410,557, 934,582]);
-    // Oclusão do celular: conteúdo do notebook clipado à esquerda da linha
-    // (925,358)-(908,706) do quadro — o celular da base fica por cima.
-    const A = paraLocal(tNb, 925, 358), B = paraLocal(tNb, 908, 706);
-    const dx = (B[0]-A[0]) / (B[1]-A[1]);
-    const yTop = -20, yBot = 852;
-    const xTop = A[0] + dx*(yTop-A[1]), xBot = A[0] + dx*(yBot-A[1]);
-    nb.style.clipPath = 'polygon(-20px ' + yTop + 'px, ' + xTop + 'px ' + yTop + 'px, '
-      + xBot + 'px ' + yBot + 'px, -20px ' + yBot + 'px)';
+    const tNb = homografia(1363, 832, [429,236, 950,238, 410,556, 933,581]);
+    // Oclusão do celular: entalhe SÓ na região do celular (abaixo do topo dele,
+    // canvas y>356, à direita da linha 925,356 → 898,930). Acima do celular o
+    // conteúdo segue inteiro — um clip vertical até o topo cortava o "Buscar".
+    const pl = (x, y) => paraLocal(tNb, x, y).map((v) => v.toFixed(1) + 'px').join(' ');
+    nb.style.clipPath = 'polygon(-40px -40px, 1420px -40px, '
+      + pl(1300, 356) + ', ' + pl(925, 356) + ', ' + pl(898, 930) + ', ' + pl(-80, 930) + ', -40px 900px)';
     aplicar(nb, tNb);
 
     // Celular: conteúdo cobre o vidro inteiro (como app real); a ilha é repintada
     // por cima pelo #ilha. Bordas todas varridas de dentro para fora.
+    // Inset de 1.5px: a aresta do layer 3D não recebe antialiasing do Chromium;
+    // dentro do vidro ela cai creme-sobre-creme (invisível) em vez de sobre a
+    // moldura preta (degraus visíveis).
     aplicar(document.getElementById('tela-ph'),
-      homografia(137, 284, [941,365, 1065,368, 932,622, 1055,629]));
+      homografia(137, 284, [942.5,366.5, 1063.5,369.5, 933.5,620.5, 1053.5,627.5]));
   </script>
 </body>
 </html>
