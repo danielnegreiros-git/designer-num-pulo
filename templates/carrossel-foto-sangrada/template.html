@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel — {{TEMA}}</title>
+<link rel="stylesheet" href="../../assets/fonts.css">
+<link rel="stylesheet" href="../../design-system/tokens.css">
+<style>
+  /* Carrossel Instagram 1080×1440 (3:4) — padrão herdado do carrossel Gramado.
+     Peça: ajustar os href acima para ../../../../ (peça mora 4 níveis abaixo).
+     Render: --largura 1080 --altura (1440 × nº de slides) --escala 2, recorte
+     de N quadros 2160×2880. Cada .slide tem exatamente 1440px, sem gap. */
+  :root {
+    --margem: 120px;
+    --coluna: 780px;
+    --titulo: 96px;
+    --corpo: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #000; }
+  body { width: 1080px; }
+
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1440px;
+    overflow: hidden;
+    color: #fff;
+    --scrim: .55;
+  }
+  .foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  /* split: duas faixas de 720px, para slide de comparação */
+  .faixa { position: absolute; left: 0; width: 1080px; height: 720px; overflow: hidden; }
+  .faixa.topo { top: 0; }
+  .faixa.base { top: 720px; }
+  .faixa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* Vinhetas escurecem só o lado que recebe texto, e a opacidade NÃO é chutada:
+     cada slide passa --scrim com o valor de `render.mjs analisar` para a faixa
+     que leva o texto. O scrim fica CHEIO ao longo de todo o bloco e só decai
+     acima dele — gradiente que cai a partir da base entrega metade do valor
+     medido na primeira linha do título. */
+  .vin-baixo, .vin-cima, .vin-meio, .vin-topo { position: absolute; left: 0; width: 100%; pointer-events: none; }
+  .vin-baixo {
+    bottom: 0; height: 88%;
+    background: linear-gradient(to top,
+      rgba(0,0,0,var(--scrim)) 0%,
+      rgba(0,0,0,var(--scrim)) 48%,
+      rgba(0,0,0,calc(var(--scrim) * .62)) 66%,
+      rgba(0,0,0,calc(var(--scrim) * .22)) 84%,
+      transparent 100%);
+  }
+  .vin-cima {
+    top: 0; height: 78%;
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,var(--scrim)) 0%,
+      rgba(0,0,0,var(--scrim)) 46%,
+      rgba(0,0,0,calc(var(--scrim) * .60)) 64%,
+      rgba(0,0,0,calc(var(--scrim) * .20)) 83%,
+      transparent 100%);
+  }
+  .vin-meio {
+    top: 0; height: 100%;
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,calc(var(--scrim) * .34)) 0%,
+      rgba(0,0,0,calc(var(--scrim) * .20)) 22%,
+      rgba(0,0,0,var(--scrim)) 44%,
+      rgba(0,0,0,var(--scrim)) 57%,
+      rgba(0,0,0,calc(var(--scrim) * .42)) 72%,
+      rgba(0,0,0,calc(var(--scrim) * .95)) 100%);
+  }
+  /* reforço de topo — garante o marcador legível sobre céu ou parede clara */
+  .vin-topo {
+    top: 0; height: 24%;
+    background: linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.16) 52%, transparent 100%);
+  }
+
+  .bloco {
+    position: absolute;
+    left: var(--margem);
+    width: var(--coluna);
+    z-index: 2;
+  }
+  .bloco.baixo  { bottom: 132px; }
+  .bloco.cima   { top: 172px; }
+  .bloco.centro { top: 50%; transform: translateY(-50%); }
+
+  /* Rótulo fixo de contexto (cidade, dia, etapa). Opcional: só entra quando o
+     carrossel alterna entre dois assuntos e o leitor precisa saber onde está. */
+  .marcador {
+    position: absolute;
+    top: 64px;
+    left: var(--margem);
+    z-index: 2;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: .30em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.92);
+  }
+  .marcador::before {
+    content: '';
+    display: inline-block;
+    width: 34px;
+    height: 2px;
+    background: #fff;
+    vertical-align: middle;
+    margin-right: 16px;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: var(--titulo);
+    line-height: 1.02;
+    margin: 0 0 30px;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+  }
+  h2 em { font-style: italic; }
+
+  p {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: var(--corpo);
+    line-height: 1.44;
+    margin: 0;
+    color: rgba(255,255,255,.96);
+  }
+  p strong { font-weight: 600; color: #fff; }
+  p + p { margin-top: 22px; }
+
+  .anton {
+    font-family: 'Anton', sans-serif;
+    text-transform: uppercase;
+    font-weight: 400;
+    line-height: .92;
+    letter-spacing: .004em;
+    margin: 0;
+  }
+
+  /* capa */
+  .capa .anton { font-size: 148px; }
+  .capa .ligacao {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 84px;
+    line-height: 1;
+    display: block;
+    margin: 6px 0 4px 6px;
+  }
+
+  /* CTA */
+  .opcoes { margin: 0 0 44px; padding: 0; list-style: none; }
+  .opcoes li {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 1.25;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 22px;
+  }
+  .opcoes .seta { font-weight: 400; font-size: 32px; opacity: .9; }
+  .opcoes .emoji { font-size: 38px; vertical-align: -.08em; margin-left: 4px; }
+  .assinatura {
+    position: absolute;
+    left: var(--margem);
+    bottom: 62px;
+    z-index: 2;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: .04em;
+    color: rgba(255,255,255,.88);
+  }
+</style>
+</head>
+<body>
+
+<!-- CAPA — sem rosto (perde CTR). Split quando o tema é comparação. -->
+<section class="slide capa" style="--scrim: {{SCRIM}}">
+  <div class="faixa topo"><img src="imagens/{{FOTO_A}}" style="object-position: 50% 45%"></div>
+  <div class="faixa base"><img src="imagens/{{FOTO_B}}" style="object-position: 50% 45%"></div>
+  <div class="vin-meio"></div>
+  <div class="bloco centro" style="top: 47%">
+    <p class="anton">{{LADO_A}}</p>
+    <span class="ligacao">ou</span>
+    <p class="anton">{{LADO_B}}?</p>
+  </div>
+  <div class="bloco baixo" style="bottom: 112px">
+    <p>{{TEXTO_CAPA}}</p>
+  </div>
+</section>
+
+<!-- CAPA alternativa, foto única:
+<section class="slide capa" style="--scrim: {{SCRIM}}">
+  <img class="foto" src="imagens/{{FOTO}}">
+  <div class="vin-baixo"></div>
+  <div class="bloco baixo">
+    <p class="anton">{{DESTINO}}</p>
+    <h2>{{SUBTITULO}}</h2>
+    <p>{{TEXTO}}</p>
+  </div>
+</section>
+-->
+
+<!-- SLIDE de conteúdo, texto no rodapé -->
+<section class="slide" style="--scrim: {{SCRIM}}">
+  <img class="foto" src="imagens/{{FOTO}}" style="object-position: 50% 45%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">{{MARCADOR}}</div>
+  <div class="bloco baixo">
+    <h2>{{TITULO}} <em>{{ENFASE}}</em></h2>
+    <p>{{TEXTO}} <strong>{{TEXTO_FORTE}}</strong></p>
+  </div>
+</section>
+
+<!-- SLIDE de conteúdo, texto no topo (quando `analisar` recomenda âncora cima) -->
+<section class="slide" style="--scrim: {{SCRIM}}">
+  <img class="foto" src="imagens/{{FOTO}}" style="object-position: 50% 55%">
+  <div class="vin-cima"></div>
+  <div class="marcador">{{MARCADOR}}</div>
+  <div class="bloco cima">
+    <h2>{{TITULO}} <em>{{ENFASE}}</em></h2>
+    <p>{{TEXTO}}</p>
+  </div>
+</section>
+
+<!-- CTA — último slide, com rosto e assinatura -->
+<section class="slide" style="--scrim: {{SCRIM}}">
+  <img class="foto" src="imagens/{{FOTO_CTA}}" style="object-position: 50% 42%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">{{MARCADOR}}</div>
+  <div class="bloco baixo" style="bottom: 168px">
+    <h2 style="font-size: 88px">{{PERGUNTA_CTA}}</h2>
+    <ul class="opcoes">
+      <li><span class="seta">→</span> <span>{{OPCAO_A}} <span class="emoji">{{EMOJI_A}}</span></span></li>
+      <li><span class="seta">→</span> <span>{{OPCAO_B}} <span class="emoji">{{EMOJI_B}}</span></span></li>
+    </ul>
+    <p>{{TEXTO_CTA}}</p>
+  </div>
+  <div class="assinatura">@numpulo</div>
+</section>
+
+</body>
+</html>

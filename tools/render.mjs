@@ -12,9 +12,11 @@ const USO = `uso:
   node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
   node tools/render.mjs tratar <entrada> --out <saida.(png|jpg|webp)> [--largura N] [--altura N] [--qualidade 80]
   node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
-  node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube>|--perfil bruto-canon] [--exposicao auto|off]
-                                      [--referencia <arq|pasta>] [--forca 0.7] [--saturacao 1] [--qualidade 92]
+  node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube|hald.png>|--perfil bruto-canon] [--exposicao auto|off]
+                                      [--referencia <arq|pasta>] [--forca 0.7]
+                                      [--curva 0..1] [--saturacao 1] [--nitidez 0..5] [--qualidade 92]
   node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
+  node tools/render.mjs hald --out <identity.png> [--nivel 8]   # gera identity para trazer look do Lightroom
   node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--limiar 100] [--alcance 80] [--mapa "escala,dx,dy"]
                                             [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]   # borda ocluída: restrinja o trecho
   node tools/render.mjs contorno <imagem> --quad "x,y x,y x,y x,y" --out <pasta> [--escala 1] [--zona 200]
@@ -29,8 +31,9 @@ const FLAGS_PERMITIDAS = {
   render: ['largura', 'altura', 'escala', 'out', 'pagina-inteira'],
   tratar: ['largura', 'altura', 'qualidade', 'out'],
   recortar: ['x', 'y', 'largura', 'altura', 'out'],
-  cor: ['out', 'lut', 'perfil', 'exposicao', 'referencia', 'forca', 'saturacao', 'qualidade'],
+  cor: ['out', 'lut', 'perfil', 'exposicao', 'referencia', 'forca', 'curva', 'saturacao', 'nitidez', 'qualidade'],
   analisar: ['grade', 'alvo'],
+  hald: ['out', 'nivel'],
   'medir-tela': ['regiao', 'limiar', 'mapa', 'alcance', 'esq', 'dir', 'topo', 'fundo'],
   contorno: ['quad', 'out', 'escala', 'zona'],
   info: [],
@@ -293,8 +296,89 @@ async function contorno(pos, op) {
 // Ordem fixa: LUT (curva da câmera) → referência (casa com foto aprovada) →
 // exposição (níveis por percentil) → saturação. Inverter a ordem faz o LUT
 // receber entrada que não é log e devolver cor errada.
+// `bruto-canon` calibrado em 2026-08-08 contra as fotos exportadas da mesma
+// viagem: os frames batiam contraste global 67 contra 53 das fotos e ainda assim
+// pareciam mais moles. Contraste global mede espalhamento da cena inteira; o que
+// falta no log convertido é punch de meio-tom, cor e micro-detalhe. Daí curva S
+// nos médios (sem mexer nos extremos, que a exposição já ancorou), saturação e
+// sharpen — e não mais ganho de contraste global, que só estouraria a foto.
+// Saturação média das fotos exportadas do canal, medida em 2026-08-08 sobre as
+// cinco fotos aprovadas da peça de carrossel. Alvo do modo `--saturacao auto`.
+const ALVO_SATURACAO = 26
+
 const PERFIS = {
-  'bruto-canon': { lut: 'assets/luts/canon-log3-rec709.cube', exposicao: 'auto' },
+  'bruto-canon': {
+    lut: 'assets/luts/canon-log3-rec709.cube',
+    exposicao: 'auto',
+    curva: 0.4,
+    saturacao: 'auto',
+    nitidez: 2.4,
+  },
+}
+
+// HALD CLUT: a ponte entre um look feito no Lightroom/Camera Raw e este worker.
+// Preset .xmp é paramétrico do Adobe e não roda fora dele; um HALD identity
+// revelado com o preset aplicado carrega o mesmo look como tabela de cor, que
+// roda em qualquer lugar. Fluxo: `render.mjs hald --out identity.png`, revelar
+// no Lightroom com o preset, exportar PNG sem redimensionar, e passar o arquivo
+// revelado em `--lut`.
+async function gerarHald(pos, op) {
+  if (!op.out) sairUso('hald exige --out <arquivo.png>')
+  if (extname(op.out).toLowerCase() !== '.png') sairUso('hald exige saída .png (JPEG destrói a tabela)')
+  const nivel = inteiro(op, 'nivel', 8)
+  if (nivel < 2 || nivel > 16) sairUso('--nivel entre 2 e 16 (8 = 512×512, 64 passos por canal)')
+  const n = nivel * nivel
+  const lado = nivel * nivel * nivel
+  const px = Buffer.alloc(lado * lado * 3)
+  for (let b = 0; b < n; b++) {
+    for (let g = 0; g < n; g++) {
+      for (let r = 0; r < n; r++) {
+        const i = r + g * n + b * n * n
+        const o = i * 3
+        px[o] = Math.round((r / (n - 1)) * 255)
+        px[o + 1] = Math.round((g / (n - 1)) * 255)
+        px[o + 2] = Math.round((b / (n - 1)) * 255)
+      }
+    }
+  }
+  garantirPasta(op.out)
+  const r = await sharp(px, { raw: { width: lado, height: lado, channels: 3 } }).png({ compressionLevel: 9 }).toFile(op.out)
+  console.log(JSON.stringify({
+    ok: true,
+    saida: op.out,
+    largura: r.width,
+    altura: r.height,
+    nivel,
+    passosPorCanal: n,
+    comoUsar: [
+      'importar no Lightroom SEM nenhum ajuste automático',
+      'aplicar o preset desejado',
+      'exportar PNG no tamanho original, sem redimensionar, sem sharpen de saída, sRGB',
+      'usar o arquivo exportado em: render.mjs cor <foto> --out X --lut <hald-revelado.png>',
+    ],
+  }))
+}
+
+async function lerHald(caminho) {
+  const { data, info: m } = await sharp(caminho).removeAlpha().raw().toBuffer({ resolveWithObject: true })
+  if (m.width !== m.height) sairUso(`HALD precisa ser quadrado: ${m.width}×${m.height}`)
+  const nivel = Math.round(Math.cbrt(m.width))
+  if (nivel ** 3 !== m.width) sairUso(`largura ${m.width} não é nível³ de HALD — exportou redimensionado?`)
+  const n = nivel * nivel
+  const dados = new Float32Array(n * n * n * 3)
+  for (let b = 0; b < n; b++) {
+    for (let g = 0; g < n; g++) {
+      for (let r = 0; r < n; r++) {
+        const i = r + g * n + b * n * n
+        const src = i * m.channels
+        const dst = (b * n * n + g * n + r) * 3
+        dados[dst] = data[src] / 255
+        dados[dst + 1] = data[src + 1] / 255
+        dados[dst + 2] = data[src + 2] / 255
+      }
+    }
+  }
+  return { n, dmin: [0, 0, 0], dmax: [1, 1, 1], dados, origem: `HALD nível ${nivel}` }
 }
 
 function lerCube(caminho) {
@@ -406,7 +490,12 @@ async function cor(pos, op) {
   if (!['auto', 'off'].includes(exposicao)) sairUso('--exposicao aceita auto ou off')
   const forca = numero(op, 'forca', 0.7)
   if (forca < 0 || forca > 1) sairUso('--forca entre 0 e 1')
-  const saturacao = numero(op, 'saturacao', 1)
+  const perfil = op.perfil ? PERFIS[op.perfil] : {}
+  const curva = numero(op, 'curva', perfil.curva ?? 0)
+  if (curva < 0 || curva > 1) sairUso('--curva entre 0 e 1')
+  const saturacao = op.saturacao === 'auto' ? 'auto' : numero(op, 'saturacao', perfil.saturacao ?? 1)
+  const nitidez = numero(op, 'nitidez', perfil.nitidez ?? 0)
+  if (nitidez < 0 || nitidez > 5) sairUso('--nitidez entre 0 e 5')
   const qualidade = inteiro(op, 'qualidade', 92)
   garantirPasta(op.out)
 
@@ -417,7 +506,9 @@ async function cor(pos, op) {
   const aplicado = []
 
   if (caminhoLut) {
-    const lut = lerCube(caminhoLut)
+    if (!existsSync(caminhoLut)) sairUso(`LUT não existe: ${caminhoLut}`)
+    const ehHald = ['.png', '.tif', '.tiff'].includes(extname(caminhoLut).toLowerCase())
+    const lut = ehHald ? await lerHald(caminhoLut) : lerCube(caminhoLut)
     const cache = new Map()
     for (let i = 0; i < total; i++) {
       const o = i * C
@@ -484,10 +575,74 @@ async function cor(pos, op) {
     }
   }
 
-  let img = sharp(px, { raw: { width: W, height: H, channels: C } })
+  if (curva > 0) {
+    // Curva S ancorada nos extremos: o deslocamento é máximo em 0,25 e 0,75 e
+    // vai a zero em 0 e 1, então preto e branco ficam onde a exposição colocou.
+    const tabela = new Uint8Array(256)
+    for (let v = 0; v < 256; v++) {
+      const x = v / 255
+      const y = x + curva * (x - 0.5) * (1 - Math.abs(2 * x - 1))
+      tabela[v] = Math.min(255, Math.max(0, Math.round(y * 255)))
+    }
+    for (let i = 0; i < total; i++) {
+      const o = i * C
+      px[o] = tabela[px[o]]
+      px[o + 1] = tabela[px[o + 1]]
+      px[o + 2] = tabela[px[o + 2]]
+    }
+    aplicado.push({ etapa: 'curva', valor: curva })
+  }
+
+  // Saturação é ALVO, não ganho fixo: ganho 1,6 numa cena já colorida (o prato
+  // de pão com tomate) deixa a cor artificial, e a mesma 1,6 mal levanta um
+  // frame de fim de tarde. `auto` mede a saturação da imagem e mira o valor das
+  // fotos exportadas do canal (~26%). Erro pago em 2026-08-08.
   if (saturacao !== 1) {
-    img = sharp(await img.png().toBuffer()).modulate({ saturation: saturacao })
-    aplicado.push({ etapa: 'saturacao', valor: saturacao })
+    const medir = () => {
+      let soma = 0
+      for (let i = 0; i < total; i++) {
+        const o = i * C
+        const max = Math.max(px[o], px[o + 1], px[o + 2])
+        const min = Math.min(px[o], px[o + 1], px[o + 2])
+        soma += max === 0 ? 0 : (max - min) / max
+      }
+      return (soma / total) * 100
+    }
+    const aplicarGanho = (k) => {
+      for (let i = 0; i < total; i++) {
+        const o = i * C
+        const cinza = 0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2]
+        for (let c = 0; c < 3; c++) {
+          px[o + c] = Math.min(255, Math.max(0, Math.round(cinza + (px[o + c] - cinza) * k)))
+        }
+      }
+    }
+    if (saturacao === 'auto') {
+      const antes = medir()
+      const ganhos = []
+      // duas passadas: o ganho no RGB não é linear na métrica de saturação
+      for (let passo = 0; passo < 2; passo++) {
+        const atual = medir()
+        if (atual < 0.5) break
+        const k = Math.min(2, Math.max(1, ALVO_SATURACAO / atual))
+        if (Math.abs(k - 1) < 0.02) break
+        aplicarGanho(k)
+        ganhos.push(+k.toFixed(3))
+      }
+      aplicado.push({ etapa: 'saturacao', modo: 'auto', alvo: ALVO_SATURACAO, de: +antes.toFixed(1), para: +medir().toFixed(1), ganhos })
+    } else {
+      aplicarGanho(saturacao)
+      aplicado.push({ etapa: 'saturacao', valor: saturacao })
+    }
+  }
+
+  let img = sharp(px, { raw: { width: W, height: H, channels: C } })
+  if (nitidez > 0) {
+    // Sharpen por último, depois de cor: afiar antes faz a curva e a saturação
+    // trabalharem em cima do halo. Frame 16:9 vira 3:4 com upscale de ~1,33×
+    // no slide, então o sharpen aqui também compensa essa ampliação.
+    img = sharp(await img.png().toBuffer()).sharpen({ sigma: nitidez })
+    aplicado.push({ etapa: 'nitidez', sigma: nitidez })
   }
   const formato = extname(op.out).slice(1).toLowerCase()
   if (formato === 'png') img = img.png()
@@ -557,6 +712,48 @@ async function analisar(pos, op) {
     .raw()
     .toBuffer({ resolveWithObject: true })
   const { width: W, height: H, channels: C } = m
+
+  // Métricas globais: servem para comparar frame tratado com foto exportada por
+  // número, em vez de "achei que ficou perto". Nitidez é energia de gradiente
+  // (Sobel simplificado), normalizada pela amostra, então só compara entre
+  // imagens medidas na mesma largura.
+  const globais = (() => {
+    let somaY = 0
+    let soma2Y = 0
+    let somaSat = 0
+    let somaGrad = 0
+    let nGrad = 0
+    const n = W * H
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const o = (y * W + x) * C
+        const r = data[o]
+        const g = data[o + 1]
+        const b = data[o + 2]
+        const cinza = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        somaY += cinza
+        soma2Y += cinza * cinza
+        const max = Math.max(r, g, b)
+        const min = Math.min(r, g, b)
+        somaSat += max === 0 ? 0 : (max - min) / max
+        if (x + 1 < W && y + 1 < H) {
+          const oq = (y * W + x + 1) * C
+          const ob = ((y + 1) * W + x) * C
+          const gx = cinza - (0.2126 * data[oq] + 0.7152 * data[oq + 1] + 0.0722 * data[oq + 2])
+          const gy = cinza - (0.2126 * data[ob] + 0.7152 * data[ob + 1] + 0.0722 * data[ob + 2])
+          somaGrad += Math.sqrt(gx * gx + gy * gy)
+          nGrad++
+        }
+      }
+    }
+    const mediaY = somaY / n
+    return {
+      brilho: +mediaY.toFixed(1),
+      contraste: +Math.sqrt(Math.max(0, soma2Y / n - mediaY * mediaY)).toFixed(1),
+      saturacao: +((somaSat / n) * 100).toFixed(1),
+      nitidez: +(somaGrad / nGrad).toFixed(2),
+    }
+  })()
 
   const celulas = []
   for (let ly = 0; ly < linhas; ly++) {
@@ -635,6 +832,7 @@ async function analisar(pos, op) {
     ok: true,
     imagem: entrada,
     alvoContraste: alvo,
+    globais,
     faixas,
     recomendacao: {
       ancora: escolhida.nome,
@@ -660,7 +858,7 @@ async function info(pos) {
 }
 
 const [comando, ...resto] = process.argv.slice(2)
-const comandos = { render, tratar, recortar, cor, analisar, 'medir-tela': medirTela, contorno, info }
+const comandos = { render, tratar, recortar, cor, analisar, hald: gerarHald, 'medir-tela': medirTela, contorno, info }
 if (!comandos[comando]) sairUso(comando ? `comando desconhecido: ${comando}` : undefined)
 const { pos, op } = lerArgs(resto, comando)
 comandos[comando](pos, op).catch((e) => {

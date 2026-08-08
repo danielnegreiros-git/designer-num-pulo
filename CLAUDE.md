@@ -78,8 +78,10 @@ peça desse tipo segue `templates/mockup-tela-em-cena/manifest.md`.
 
 ## Carrossel de Instagram
 
-Padrão de referência do Daniel: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
-Peça de origem no repo: `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`.
+**Template: `templates/carrossel-foto-sangrada/`** — aprovado pelo Daniel em 2026-08-08.
+Carrossel novo começa por ele, não do zero. Peça de origem:
+`biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`. Padrão de referência
+dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
 
 - **2160×2880 (3:4)**, não 1:1. Foto sangrada, texto só branco, vinheta no lado do texto.
 - Normalizado a 1080 de largura: margem 120px, coluna 780px, título Instrument Serif 96px
@@ -98,8 +100,20 @@ Peça de origem no repo: `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-ba
 - **O padrão de cor do canal são as fotos exportadas do próprio destino.** Para o frame
   casar com elas na mesma peça, somar `--referencia <pasta com as fotos> --forca 0.5`
   (casamento estatístico por canal). Ordem fixa e não negociável dentro do comando:
-  LUT → referência → exposição → saturação. Fora dessa ordem o LUT recebe entrada que não
-  é log e devolve cor errada.
+  LUT → referência → exposição → curva → saturação → nitidez. Fora dessa ordem o LUT
+  recebe entrada que não é log e devolve cor errada, e o sharpen vira halo afiado.
+- **Saturação é alvo, não ganho.** `--saturacao auto` mede a imagem e mira os 26% das
+  fotos aprovadas: cena já colorida (prato de comida, 31%) não recebe nada, frame de fim
+  de tarde (17%) sobe. Ganho fixo de 1,6 deixou o tomate artificial em 2026-08-08.
+- **Contraste global engana.** Os frames convertidos batiam 67 contra 53 das fotos e ainda
+  assim pareciam moles: o que falta no log é punch de meio-tom, não espalhamento. Curva S
+  ancorada nos extremos (`--curva`), nunca ganho de contraste global.
+- **Look do Lightroom se traz por HALD CLUT.** Preset `.xmp` é paramétrico do Adobe e não
+  roda aqui. `render.mjs hald --out identity.png` gera a tabela; o Daniel revela com o
+  preset e exporta PNG sem redimensionar; `cor --lut <hald-revelado.png>` aplica. Vale
+  para qualquer editor que revele imagem, não só Lightroom.
+- **Frame 16:9 em slide 3:4 sofre upscale de ~1,33×** e nunca vai bater com foto nativa
+  vertical em detalhe fino. O sharpen compensa em parte; o limite é da fonte.
 - **Onde o texto vai numa foto é medição, não olho:** `render.mjs analisar <imagem>` devolve,
   por faixa, brilho, detalhe, concentração de pele e o **scrim** necessário para o branco
   bater contraste 4,5. O slide usa esse número em `--scrim`; vinheta chutada falhou em

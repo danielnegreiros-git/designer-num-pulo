@@ -130,6 +130,20 @@ Três apontamentos dele sobre a v1, todos corrigidos:
 
 Aprovado por ele na mesma rodada: diagramação, marcador de cidade e o split.
 
+## Calibração do Daniel, 2026-08-08 (rodada 2)
+
+"Os frames comparados às fotos têm uma pequena diferença: precisa de mais contraste, um
+pouco mais de saturação e sharpen." Medido antes de mexer, e o número contrariou a
+hipótese fácil: o contraste **global** dos frames já era maior que o das fotos (67 contra
+53). O que faltava era punch de meio-tom, cor e micro-detalhe. O perfil `bruto-canon`
+ganhou curva S ancorada nos extremos (0,4), saturação por alvo e sharpen (sigma 2,4).
+
+Saturação virou **alvo** e não ganho na mesma rodada: ganho fixo de 1,6 deixou o tomate
+do slide 7 artificial (a cena já estava em 31%, acima do alvo de 26%). Com `auto`, o
+prato recebe ganho zero e o frame do Metropolis sobe de 16,9% para 24,7%.
+
+Nesta rodada a peça virou **`templates/carrossel-foto-sangrada/`**, por decisão dele.
+
 ## Pendências
 
 - Aprovação do Daniel. Publicação é ação humana.
