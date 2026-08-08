@@ -64,6 +64,20 @@ Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` er
    (largura deve crescer na direção mais próxima da câmera) e validar o resultado
    com recorte 3× das duas laterais em duas alturas — borda do conteúdo paralela ao
    bezel, folga constante.
+6. **Composição com `transform: matrix3d` sai serrilhada: renderizar com
+   supersampling.** O Chromium não antialiasa a aresta de um layer 3D — a borda do
+   overlay vira degraus visíveis. Pipeline obrigatório em peça com homografia:
+   `render --escala 4` para o scratchpad e `tratar --largura <final>` (Lanczos do
+   Sharp) para a saída. Reforço: **inset de ~1,5px** nos cantos do quad joga a
+   aresta sem AA para dentro da tela (creme sobre creme) em vez de sobre a moldura
+   preta. Erro pago em 2026-08-07.
+7. **Clip de oclusão recorta só a região do objeto que ocupa a frente.** Um clip
+   vertical de altura inteira para esconder o canto atrás de um celular cortou
+   conteúdo lá em cima (o "Buscar" do notebook). O polígono desce até o topo do
+   objeto oclusor e só ali entalha. Erro pago em 2026-08-07.
+8. **Raio do conteúdo = raio do vidro.** Overlay com `border-radius` menor que o do
+   device deixa o canto do conteúdo aparecer sobre a moldura. Medir a curva no
+   recorte 3× do canto e igualar.
 
 ## Dois sistemas visuais — roteamento
 

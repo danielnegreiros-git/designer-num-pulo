@@ -30,6 +30,14 @@ verificado por amostragem); base inferior é a mesa (corte de altura permitido).
 - `tela-patacho.jpg` — screenshot real da interna da Praia do Patacho
   (guia.numpulo.com.br, jul/2026, acervo MockupMobile).
 
+## Render
+
+    node tools/render.mjs render <peça>/fonte.html --out <scratch>/cena-4x.png --largura 1200 --altura 800 --escala 4
+    node tools/render.mjs tratar <scratch>/cena-4x.png --out saida/cena-guia-landing-2400x1600.png --largura 2400
+
+Supersampling obrigatório (regra 6 do CLAUDE.md): render direto em escala 2 deixa a
+aresta do layer 3D serrilhada.
+
 ## Técnica
 
 - Homografia (grade 1:1, regra 5 do CLAUDE.md) para as duas telas.
