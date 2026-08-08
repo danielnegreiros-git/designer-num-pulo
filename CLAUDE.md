@@ -17,7 +17,10 @@ Aprovadas pelo Daniel em 2026-08-07 (spec, seção 4).
 1. **Nunca usar a API paga da Anthropic.** Todo LLM via `claude -p` (assinatura Max).
 2. **Nada é publicado automaticamente.** Entrega termina em arquivo aprovado; quem usa é o demandante ou o Daniel.
 3. **IA nunca inventa nem exagera paisagem de destino.** Foto de destino é sempre real, do acervo. IA serve para melhorar (upscale, limpeza, fundo) e imagery de apoio (mockup, background abstrato).
-4. **Acervo de fotos é somente leitura.** Nenhuma escrita em `H:`, `Y:` ou `D:`.
+4. **Acervo de fotos é somente leitura.** Nenhuma escrita em `H:`, `Y:` ou `D:` — **uma
+   exceção**, aberta pelo Daniel em 2026-08-08: `render.mjs indexar-fotos` grava o índice
+   em `<destino>/_index/fotos/` e em nenhum outro lugar. Nenhuma imagem é criada, movida
+   ou alterada. Exceção nova exige decisão dele, com o mesmo rastro.
 5. **Credencial fora do git** (`.env` gitignored).
 6. **A skill global `num-pulo-brand-guidelines` só muda com rastro**: changelog datado na skill + registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo rastro. Este worker é o curador dela.
 
@@ -30,11 +33,16 @@ Peça nasce como **HTML estático + CSS** com os tokens de `design-system/tokens
     node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
     node tools/render.mjs tratar <entrada> --out <saida> [--largura N] [--altura N] [--qualidade 80]
     node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
-    node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube>|--perfil bruto-canon]
-                                        [--exposicao auto|off] [--referencia <arq|pasta>] [--forca 0.7]
+    node tools/render.mjs cor <entrada> --out <saida> [--perfil bruto-canon|raw-canon|iphone]
+                                        [--lut <arq.cube|hald.png>] [--exposicao auto|off]
+                                        [--referencia <arq|pasta>] [--forca 0.7]
+                                        [--preset <arq.xmp>] [--preset-forca 1]
+                                        [--curva 0..1] [--saturacao N|auto] [--nitidez 0..5]
     node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
     node tools/render.mjs rostos <imagem> [--forcar] [--cache <pasta>]
     node tools/render.mjs checar <fonte.html> [--largura 1080] [--altura 1440] [--minimo 0.06]
+    node tools/render.mjs indexar-fotos <destino> [--pasta Fotografia] [--descrever] [--out <dir>]
+    node tools/render.mjs hald --out <identity.png> [--nivel 8]
     node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--alcance 80] [--limiar 100] [--mapa "escala,dx,dy"]
                                               [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]
     node tools/render.mjs contorno <imagem> --quad "x,y x,y x,y x,y" --out <pasta> [--escala 1] [--zona 200]
@@ -101,9 +109,17 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   (`assets/luts/canon-log3-rec709.cube`, copiado do acervo de LUTs do Daniel).
 - **O padrão de cor do canal são as fotos exportadas do próprio destino.** Para o frame
   casar com elas na mesma peça, somar `--referencia <pasta com as fotos> --forca 0.5`
-  (casamento estatístico por canal). Ordem fixa e não negociável dentro do comando:
-  LUT → referência → exposição → curva → saturação → nitidez. Fora dessa ordem o LUT
-  recebe entrada que não é log e devolve cor errada, e o sharpen vira halo afiado.
+  (casamento estatístico por canal).
+- **Ordem fixa e não negociável dentro do `cor`:**
+  `decodificação → LUT → exposição → preset → referência → curva → saturação → nitidez`.
+  Cada posição foi paga: o LUT precisa receber log (senão devolve cor errada); a
+  normalização de níveis vem **antes** do preset, porque depois desfaz o preto levantado
+  que a curva do preset cria (voltou de 8 para 58 na primeira tentativa); e o sharpen é o
+  último, senão a cor trabalha em cima do halo.
+- **O pipeline inteiro roda em float e quantiza uma vez só, no fim, com dither de meio
+  LSB.** Em 8 bits, seis transformações empilhadas arredondam seis vezes e gradiente amplo
+  (céu de fim de tarde) vira faixa de cor. Etapa nova entra em float, nunca voltando para
+  inteiro no meio.
 - **Saturação é alvo, não ganho.** `--saturacao auto` mede a imagem e mira os 26% das
   fotos aprovadas: cena já colorida (prato de comida, 31%) não recebe nada, frame de fim
   de tarde (17%) sobe. Ganho fixo de 1,6 deixou o tomate artificial em 2026-08-08.
@@ -145,6 +161,11 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   - O gradiente mantém o scrim **cheio ao longo de todo o bloco de texto** e só decai
     acima dele. Gradiente que começa a cair na base entrega metade do valor medido na
     primeira linha do título.
+  - O reforço de topo, que sustenta o marcador, também é medido (`--scrim-topo`): o
+    padrão .42 cobre céu e parede clara, mas não cobre branco brilhante (letreiro aceso,
+    brilho 218). E **toda vinheta precisa estar no seletor que aplica `position:
+    absolute`** — `.vin-topo` ficou de fora do seletor e passou rodadas sem efeito
+    nenhum, com o marcador lendo por sorte, pelo fundo da foto.
   - **Pele é sinal, não veto.** Fruta, tijolo e parede ocre entram na faixa de pele; o que
     denuncia rosto é a faixa concentrar pele acima da média da própria foto (≥1,6×). É
     dica de onde olhar, nunca a decisão.
@@ -245,7 +266,8 @@ Nenhuma imagem do acervo é criada, movida ou alterada.
 ## Convenções não óbvias
 
 - **Slug**: `YYYY-MM-DD-<formato>-<tema>`, minúsculas com hífen. Data = produção da peça.
-- **Uma pasta por peça** em `biblioteca/pecas/<ano>/<slug>/`: `brief.md` (pedido, demandante, fontes de foto, `status: rascunho|aprovada|descartada`), fonte HTML/dados, `saida/*.png`.
+- **Uma pasta por peça** em `biblioteca/pecas/<ano>/<slug>/`: `brief.md` (pedido, demandante, fontes de foto, `status: rascunho|aprovada|descartada`), fonte HTML/dados, `saida/`. Peça com mais de um quadro leva também **dois scripts**, que são o que torna a peça reconstruível sem mim: `preparar-imagens.ps1` (acervo → `imagens/`, com a análise que definiu âncora e scrim) e `montar.ps1` (gates → render → recorte → entrega). Modelo na peça de carrossel.
+- **`saida/` é o que se entrega, e o formato sai do conteúdo**: foto sangrada em JPG q95; peça com área chapada ou transparência em PNG. Preview de auditoria (`_preview-*.jpg`) é gitignored, não é entrega.
 - **Template nasce da segunda ocorrência** de um formato, nunca de antecipação. `templates/<formato>/`: `template.html` + `manifest.md` (slots, procedimento com os comandos, peça de origem, armadilhas que ele resolve).
 - **Mockup é família, não formato único**: `templates/mockup-<tipo>/`. Existe `mockup-tela-em-cena` (aparelho em cena fotográfica, desde 07/08). Tipo novo — impresso, vestuário, tela flutuante sem cena, embalagem — é **template irmão**, nunca variação forçada dentro de um existente. O que os irmãos compartilham (homografia, inset, oclusão) mora em `assets/composicao.js`, não copiado em cada um.
 - **Design system no claude.ai/design**: `design-system/` é a fonte; sync incremental via ferramenta `DesignSync` (projeto registrado em docs/handoff.md). Preview novo leva `<!-- @dsCard group="..." -->` na primeira linha.
