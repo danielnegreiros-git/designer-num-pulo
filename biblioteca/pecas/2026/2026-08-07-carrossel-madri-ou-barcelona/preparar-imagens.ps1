@@ -1,9 +1,13 @@
 # Reconstroi imagens/ a partir do acervo (somente leitura). Reproduzivel: o que
 # esta aqui e a origem exata de cada imagem da peca e o tratamento aplicado.
 #
-# Frame de bruto sai em C-Log3 e nao entra cru na peca. Conversao pelo LUT da
-# curva da camera (--perfil bruto-canon) e casamento com as fotos exportadas do
-# proprio destino (--referencia), que sao o padrao de cor aprovado.
+# Frame de bruto sai em C-Log3 e nao entra cru na peca. Duas rotas de cor:
+#   sem -Preset : LUT da camera + casamento com as fotos exportadas do destino
+#   com -Preset : LUT da camera + preset do Lightroom do Daniel
+# O preset foi feito para CR3 e chega aqui sobre Rec709 ja convertido, por isso
+# entra escalado por -PresetForca (em forca cheia lava a imagem e puxa o
+# horizonte para verde).
+param([switch]$Preset, [double]$PresetForca = 0.4)
 $ErrorActionPreference = 'Stop'
 
 $peca   = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -39,10 +43,19 @@ foreach ($nome in $frames.Keys) {
   $t = [math]::Max(0.1, [double]$linha.duracao_s / 2)
   $bruto = Join-Path $env:TEMP "np-frame-$id.jpg"
   & ffmpeg -nostdin -loglevel error -y -ss $t -i $linha.caminho -frames:v 1 -q:v 2 $bruto
-  node $render cor $bruto --out (Join-Path $imagens "$nome.jpg") `
-    --perfil bruto-canon --referencia $ref --forca 0.5 --qualidade 92 | Out-Null
+  $saida = Join-Path $imagens "$nome.jpg"
+  if ($Preset) {
+    $xmp = 'C:\Dev\designer-num-pulo\presets-luts\Padrao Fotos Versao Nova Suave.xmp'
+    node $render cor $bruto --out $saida --lut 'C:\Dev\designer-num-pulo\assets\luts\canon-log3-rec709.cube' `
+      --exposicao auto --preset $xmp --preset-forca $PresetForca --nitidez 2.4 --qualidade 92 | Out-Null
+    $rota = "log -> LUT + preset $PresetForca"
+  } else {
+    node $render cor $bruto --out $saida `
+      --perfil bruto-canon --referencia $ref --forca 0.5 --qualidade 92 | Out-Null
+    $rota = 'log -> LUT + referencia'
+  }
   Remove-Item $bruto -Force
-  "OK $nome  <- $cidade/$id (log -> LUT + referencia)"
+  "OK $nome  <- $cidade/$id ($rota)"
 }
 
 # Fotos ja exportadas: entram sem tratamento, so recompressao.

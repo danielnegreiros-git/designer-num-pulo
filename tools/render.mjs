@@ -1,9 +1,9 @@
-#!/usr/bin/env node
+﻿#!/usr/bin/env node
 // Única ferramenta do worker designer: HTML → PNG (Playwright) e imagem (Sharp).
 // Capacidade nova vira subcomando aqui; dependência nova exige decisão do Daniel.
 import { chromium } from 'playwright'
 import sharp from 'sharp'
-import { resolve, extname } from 'node:path'
+import { resolve, extname, basename } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -13,7 +13,7 @@ const USO = `uso:
   node tools/render.mjs tratar <entrada> --out <saida.(png|jpg|webp)> [--largura N] [--altura N] [--qualidade 80]
   node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
   node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube|hald.png>|--perfil bruto-canon] [--exposicao auto|off]
-                                      [--referencia <arq|pasta>] [--forca 0.7]
+                                      [--referencia <arq|pasta>] [--forca 0.7] [--preset <arq.xmp>] [--preset-forca 1]
                                       [--curva 0..1] [--saturacao 1] [--nitidez 0..5] [--qualidade 92]
   node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
   node tools/render.mjs hald --out <identity.png> [--nivel 8]   # gera identity para trazer look do Lightroom
@@ -31,7 +31,7 @@ const FLAGS_PERMITIDAS = {
   render: ['largura', 'altura', 'escala', 'out', 'pagina-inteira'],
   tratar: ['largura', 'altura', 'qualidade', 'out'],
   recortar: ['x', 'y', 'largura', 'altura', 'out'],
-  cor: ['out', 'lut', 'perfil', 'exposicao', 'referencia', 'forca', 'curva', 'saturacao', 'nitidez', 'qualidade'],
+  cor: ['out', 'lut', 'perfil', 'exposicao', 'referencia', 'forca', 'preset', 'preset-forca', 'curva', 'saturacao', 'nitidez', 'qualidade'],
   analisar: ['grade', 'alvo'],
   hald: ['out', 'nivel'],
   'medir-tela': ['regiao', 'limiar', 'mapa', 'alcance', 'esq', 'dir', 'topo', 'fundo'],
@@ -316,6 +316,232 @@ const PERFIS = {
   },
 }
 
+// ── preset do Lightroom (.xmp) ──────────────────────────────────────────────
+// Lê um preset do Camera Raw e aplica os ajustes que são PONTUAIS (dependem só
+// do valor do pixel) e por isso têm equivalente honesto fora do Adobe: curva de
+// tons, contraste, altas/sombras/brancos/pretos, vibração/saturação, HSL por
+// faixa de matiz, calibração de primários e granulado.
+//
+// NÃO transporta, porque é espacial ou proprietário: Texture, Clarity, Dehaze,
+// Sharpness/NR do ACR e perfil de câmera (Adobe Color). O comando avisa quais
+// campos ignorou — nunca fingir que aplicou.
+//
+// Ressalva que o Daniel levantou e está certa: preset feito para CR3 opera em
+// RAW linear com latitude de arquivo bruto. Sobre C-Log3 já convertido em
+// Rec709 pelo LUT, Highlights -100 e Shadows +90 chegam num sinal comprimido e
+// o efeito é mais forte. Daí `--preset-forca`, que escala os ajustes de
+// tonalidade (não a curva nem o HSL, que são transporte direto).
+const FAIXAS_HSL = {
+  Red: 0, Orange: 30, Yellow: 60, Green: 120, Aqua: 180, Blue: 240, Purple: 285, Magenta: 320,
+}
+
+function lerPresetXmp(caminho) {
+  if (!existsSync(caminho)) sairUso(`preset não existe: ${caminho}`)
+  const xml = readFileSync(caminho, 'utf8')
+  const attr = (nome) => {
+    const m = xml.match(new RegExp(`crs:${nome}="([^"]*)"`))
+    return m ? m[1] : undefined
+  }
+  const num = (nome, padrao = 0) => {
+    const v = attr(nome)
+    if (v === undefined) return padrao
+    const n = Number(String(v).replace('+', ''))
+    return Number.isFinite(n) ? n : padrao
+  }
+  const curva = (() => {
+    const bloco = xml.match(/<crs:ToneCurvePV2012>[\s\S]*?<\/crs:ToneCurvePV2012>/)
+    if (!bloco) return null
+    const pontos = [...bloco[0].matchAll(/<rdf:li>\s*(\d+)\s*,\s*(\d+)\s*<\/rdf:li>/g)]
+      .map((m) => [Number(m[1]), Number(m[2])])
+    return pontos.length >= 2 ? pontos : null
+  })()
+
+  const hsl = {}
+  for (const cor of Object.keys(FAIXAS_HSL)) {
+    hsl[cor] = {
+      hue: num(`HueAdjustment${cor}`),
+      sat: num(`SaturationAdjustment${cor}`),
+      lum: num(`LuminanceAdjustment${cor}`),
+    }
+  }
+
+  const ignorados = []
+  for (const [campo, rotulo] of [
+    ['Texture', 'Texture'], ['Clarity2012', 'Clarity'], ['Dehaze', 'Dehaze'],
+    ['Sharpness', 'Sharpness (use --nitidez)'], ['LuminanceSmoothing', 'redução de ruído'],
+  ]) {
+    if (num(campo) !== 0) ignorados.push(rotulo)
+  }
+  if (attr('LensProfileEnable') === '1') ignorados.push('perfil de lente')
+
+  return {
+    nome: (xml.match(/<rdf:li xml:lang="x-default">([^<]+)<\/rdf:li>/) || [])[1] || basename(caminho),
+    exposicao: num('Exposure2012'),
+    contraste: num('Contrast2012'),
+    altas: num('Highlights2012'),
+    sombras: num('Shadows2012'),
+    brancos: num('Whites2012'),
+    pretos: num('Blacks2012'),
+    vibracao: num('Vibrance'),
+    saturacao: num('Saturation'),
+    curva,
+    hsl,
+    calibragem: { azulHue: num('BlueHue'), vermelhoHue: num('RedHue'), verdeHue: num('GreenHue') },
+    granulado: { quantidade: num('GrainAmount'), tamanho: num('GrainSize', 25) },
+    ignorados,
+  }
+}
+
+// Spline monotônica pelos pontos da curva de tons, avaliada em 256 passos.
+function tabelaDaCurva(pontos) {
+  const p = [...pontos].sort((a, b) => a[0] - b[0])
+  const tabela = new Uint8Array(256)
+  for (let v = 0; v < 256; v++) {
+    let i = 0
+    while (i < p.length - 2 && p[i + 1][0] < v) i++
+    const [x0, y0] = p[i]
+    const [x1, y1] = p[i + 1]
+    const t = x1 === x0 ? 0 : (v - x0) / (x1 - x0)
+    const s = t * t * (3 - 2 * t) // suaviza o joelho, como o ACR
+    tabela[v] = Math.min(255, Math.max(0, Math.round(y0 + (y1 - y0) * s)))
+  }
+  return tabela
+}
+
+function aplicarPreset(buf, total, preset, forca) {
+  const passos = []
+
+  // 1. tonalidade: exposição, altas, sombras, brancos, pretos — por máscara de
+  //    luminância, escalados por `forca` (é aqui que RAW e Rec709 divergem).
+  const ex = (preset.exposicao / 5) * forca
+  const alt = (preset.altas / 100) * forca
+  const som = (preset.sombras / 100) * forca
+  const bra = (preset.brancos / 100) * forca
+  const pre = (preset.pretos / 100) * forca
+  if (ex || alt || som || bra || pre) {
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      const L = (0.2126 * buf[o] + 0.7152 * buf[o + 1] + 0.0722 * buf[o + 2]) / 255
+      const mAlta = Math.max(0, (L - 0.45) / 0.55) ** 1.4
+      const mSombra = Math.max(0, (0.55 - L) / 0.55) ** 1.4
+      const mBranco = Math.max(0, (L - 0.7) / 0.3) ** 1.2
+      const mPreto = Math.max(0, (0.3 - L) / 0.3) ** 1.2
+      const ganho = 1 + ex + alt * mAlta * 0.55 + bra * mBranco * 0.35
+      const soma = (som * mSombra * 0.30 + pre * mPreto * 0.25) * 255
+      for (let c = 0; c < 3; c++) buf[o + c] = buf[o + c] * ganho + soma
+    }
+    passos.push({ etapa: 'tonalidade', exposicao: preset.exposicao, altas: preset.altas, sombras: preset.sombras, brancos: preset.brancos, pretos: preset.pretos, forca })
+  }
+
+  // 2. contraste: curva S no pivô 0,5, ancorada nos extremos
+  if (preset.contraste) {
+    const k = (preset.contraste / 100) * 0.55 * forca
+    for (let i = 0; i < total * 3; i++) {
+      const x = Math.min(1, Math.max(0, buf[i] / 255))
+      buf[i] = (x + k * (x - 0.5) * (1 - Math.abs(2 * x - 1))) * 255
+    }
+    passos.push({ etapa: 'contraste', valor: preset.contraste })
+  }
+
+  // 3. curva de tons: transporte direto, sem escalar por forca. Interpola na
+  //    tabela em vez de indexar, para não requantizar em 8 bits no meio.
+  if (preset.curva) {
+    const tabela = tabelaDaCurva(preset.curva)
+    for (let i = 0; i < total * 3; i++) {
+      const v = Math.min(255, Math.max(0, buf[i]))
+      const b0 = Math.floor(v)
+      const t = v - b0
+      buf[i] = tabela[b0] * (1 - t) + tabela[Math.min(255, b0 + 1)] * t
+    }
+    passos.push({ etapa: 'curva-de-tons', pontos: preset.curva })
+  }
+
+  // 4. HSL por faixa de matiz + calibração de primários + vibração/saturação
+  const temHsl = Object.values(preset.hsl).some((h) => h.hue || h.sat || h.lum)
+  const temCal = preset.calibragem.azulHue || preset.calibragem.vermelhoHue || preset.calibragem.verdeHue
+  if (temHsl || temCal || preset.vibracao || preset.saturacao) {
+    const faixas = Object.entries(FAIXAS_HSL).map(([nome, centro]) => ({ centro, ...preset.hsl[nome] }))
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      const r = Math.min(1, Math.max(0, buf[o] / 255))
+      const g = Math.min(1, Math.max(0, buf[o + 1] / 255))
+      const b = Math.min(1, Math.max(0, buf[o + 2] / 255))
+      const max = Math.max(r, g, b)
+      const min = Math.min(r, g, b)
+      const d = max - min
+      if (d < 0.004) continue
+      let h = 0
+      if (max === r) h = 60 * (((g - b) / d) % 6)
+      else if (max === g) h = 60 * ((b - r) / d + 2)
+      else h = 60 * ((r - g) / d + 4)
+      if (h < 0) h += 360
+      const l = (max + min) / 2
+      let s = d / (1 - Math.abs(2 * l - 1) || 1e-6)
+
+      let dh = 0
+      let ds = 0
+      let dl = 0
+      // O HSL também escala por `forca`: ele foi calibrado sobre RAW da Canon
+      // com perfil Adobe Color, e aqui o ponto de partida é o LUT Log3→Rec709,
+      // que responde diferente. Em força cheia, o Hue Yellow +36 do preset
+      // puxava o horizonte alaranjado do fim de tarde para verde-oliva.
+      for (const f of faixas) {
+        let dist = Math.abs(h - f.centro)
+        if (dist > 180) dist = 360 - dist
+        const peso = Math.max(0, 1 - dist / 45) * forca
+        if (!peso) continue
+        dh += (f.hue / 100) * 30 * peso
+        ds += (f.sat / 100) * peso
+        dl += (f.lum / 100) * 0.25 * peso
+      }
+      // calibração de primários: gira só o azul/vermelho/verde puros
+      const pesoAzul = Math.max(0, 1 - Math.abs(((h - 240 + 540) % 360) - 180) / 60) * forca
+      dh += (preset.calibragem.azulHue / 100) * 20 * pesoAzul
+
+      // vibração levanta menos o que já está saturado; saturação é linear
+      const vib = (preset.vibracao / 100) * (1 - s) * 0.8 * forca
+      const sat = (preset.saturacao / 100) * forca
+      s = Math.min(1, Math.max(0, s * (1 + ds + sat) + vib))
+      const nl = Math.min(1, Math.max(0, l + dl))
+      const nh = (h + dh + 360) % 360
+
+      const c2 = (1 - Math.abs(2 * nl - 1)) * s
+      const x2 = c2 * (1 - Math.abs(((nh / 60) % 2) - 1))
+      const m2 = nl - c2 / 2
+      let rr = 0
+      let gg = 0
+      let bb = 0
+      if (nh < 60) { rr = c2; gg = x2 } else if (nh < 120) { rr = x2; gg = c2 } else if (nh < 180) { gg = c2; bb = x2 } else if (nh < 240) { gg = x2; bb = c2 } else if (nh < 300) { rr = x2; bb = c2 } else { rr = c2; bb = x2 }
+      buf[o] = (rr + m2) * 255
+      buf[o + 1] = (gg + m2) * 255
+      buf[o + 2] = (bb + m2) * 255
+    }
+    passos.push({ etapa: 'cor', vibracao: preset.vibracao, saturacao: preset.saturacao, hsl: temHsl, calibragem: temCal })
+  }
+
+  // 5. granulado — PRNG com semente fixa: peça tem que sair igual toda vez
+  if (preset.granulado.quantidade) {
+    const sigma = (preset.granulado.quantidade / 100) * 14 * forca
+    let semente = 0x9e3779b9
+    const aleatorio = () => {
+      semente ^= semente << 13; semente >>>= 0
+      semente ^= semente >> 17
+      semente ^= semente << 5; semente >>>= 0
+      return semente / 0xffffffff - 0.5
+    }
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      const ruido = aleatorio() * sigma * 2
+      buf[o] += ruido
+      buf[o + 1] += ruido
+      buf[o + 2] += ruido
+    }
+    passos.push({ etapa: 'granulado', quantidade: preset.granulado.quantidade, sigma: +sigma.toFixed(2) })
+  }
+
+  return passos
+}
+
 // HALD CLUT: a ponte entre um look feito no Lightroom/Camera Raw e este worker.
 // Preset .xmp é paramétrico do Adobe e não roda fora dele; um HALD identity
 // revelado com o preset aplicado carrega o mesmo look como tabela de cor, que
@@ -502,57 +728,30 @@ async function cor(pos, op) {
   const { data, info: meta } = await sharp(entrada).raw().toBuffer({ resolveWithObject: true })
   const { width: W, height: H, channels: C } = meta
   const total = W * H
-  const px = Buffer.from(data)
   const aplicado = []
 
-  if (caminhoLut) {
-    if (!existsSync(caminhoLut)) sairUso(`LUT não existe: ${caminhoLut}`)
-    const ehHald = ['.png', '.tif', '.tiff'].includes(extname(caminhoLut).toLowerCase())
-    const lut = ehHald ? await lerHald(caminhoLut) : lerCube(caminhoLut)
-    const cache = new Map()
-    for (let i = 0; i < total; i++) {
-      const o = i * C
-      const chave = (px[o] << 16) | (px[o + 1] << 8) | px[o + 2]
-      let v = cache.get(chave)
-      if (v === undefined) {
-        v = aplicarCube([px[o], px[o + 1], px[o + 2]], lut)
-        if (cache.size < 1 << 20) cache.set(chave, v)
-      }
-      px[o] = v[0]
-      px[o + 1] = v[1]
-      px[o + 2] = v[2]
-    }
-    aplicado.push({ etapa: 'lut', arquivo: caminhoLut, tamanho: lut.n })
+  // O pipeline inteiro roda em float e quantiza UMA vez, no fim. Em 8 bits, seis
+  // transformações empilhadas (LUT, níveis, tonalidade, contraste, curva, HSL)
+  // arredondam seis vezes e o céu do fim de tarde vira faixa de cor. Erro pago
+  // em 2026-08-08, na primeira aplicação do preset.
+  const buf = new Float32Array(total * 3)
+  for (let i = 0; i < total; i++) {
+    const o = i * C
+    buf[i * 3] = data[o]
+    buf[i * 3 + 1] = data[o + 1]
+    buf[i * 3 + 2] = data[o + 2]
   }
+  const alfa = C === 4 ? new Uint8Array(total) : null
+  if (alfa) for (let i = 0; i < total; i++) alfa[i] = data[i * C + 3]
 
-  if (op.referencia) {
-    const alvo = await estatisticaRGB(arquivosDeImagem(op.referencia))
-    const soma = [0, 0, 0]
-    const soma2 = [0, 0, 0]
-    for (let i = 0; i < total; i++) {
-      const o = i * C
-      for (let k = 0; k < 3; k++) { soma[k] += px[o + k]; soma2[k] += px[o + k] * px[o + k] }
-    }
-    const origem = [0, 1, 2].map((k) => {
-      const media = soma[k] / total
-      return { media, desvio: Math.sqrt(Math.max(1, soma2[k] / total - media * media)) }
-    })
-    for (let i = 0; i < total; i++) {
-      const o = i * C
-      for (let k = 0; k < 3; k++) {
-        const casado = (px[o + k] - origem[k].media) * (alvo[k].desvio / origem[k].desvio) + alvo[k].media
-        px[o + k] = Math.min(255, Math.max(0, Math.round(px[o + k] + (casado - px[o + k]) * forca)))
-      }
-    }
-    aplicado.push({ etapa: 'referencia', forca, alvo: alvo.map((a) => Math.round(a.media)) })
-  }
-
-  if (exposicao === 'auto') {
-    // Níveis por percentil sobre a luminância: 0,3% de clip em cada ponta.
+  // Níveis por percentil sobre a luminância: 0,3% de clip em cada ponta.
+  const normalizarNiveis = () => {
+    if (exposicao !== 'auto') return
     const hist = new Uint32Array(256)
     for (let i = 0; i < total; i++) {
-      const o = i * C
-      hist[Math.round(0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2])]++
+      const o = i * 3
+      const v = Math.round(0.2126 * buf[o] + 0.7152 * buf[o + 1] + 0.0722 * buf[o + 2])
+      hist[Math.min(255, Math.max(0, v))]++
     }
     const corte = Math.round(total * 0.003)
     let baixo = 0
@@ -561,34 +760,82 @@ async function cor(pos, op) {
     for (let acc = 0, v = 255; v >= 0; v--) { acc += hist[v]; if (acc > corte) { alto = v; break } }
     if (alto - baixo > 20) {
       const ganho = 255 / (alto - baixo)
-      const tabela = new Uint8Array(256)
-      for (let v = 0; v < 256; v++) tabela[v] = Math.min(255, Math.max(0, Math.round((v - baixo) * ganho)))
-      for (let i = 0; i < total; i++) {
-        const o = i * C
-        px[o] = tabela[px[o]]
-        px[o + 1] = tabela[px[o + 1]]
-        px[o + 2] = tabela[px[o + 2]]
-      }
+      for (let i = 0; i < total * 3; i++) buf[i] = (buf[i] - baixo) * ganho
       aplicado.push({ etapa: 'exposicao', preto: baixo, branco: alto })
     } else {
       aplicado.push({ etapa: 'exposicao', pulada: 'faixa dinâmica curta demais para normalizar' })
     }
   }
 
+  if (caminhoLut) {
+    if (!existsSync(caminhoLut)) sairUso(`LUT não existe: ${caminhoLut}`)
+    const ehHald = ['.png', '.tif', '.tiff'].includes(extname(caminhoLut).toLowerCase())
+    const lut = ehHald ? await lerHald(caminhoLut) : lerCube(caminhoLut)
+    // Cache pela cor de entrada (a origem é uint8, então há no máximo 16,7M
+    // chaves e na prática muito menos); a saída fica em float.
+    const cache = new Map()
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      const chave = (buf[o] << 16) | (buf[o + 1] << 8) | buf[o + 2]
+      let v = cache.get(chave)
+      if (v === undefined) {
+        v = aplicarCube([buf[o], buf[o + 1], buf[o + 2]], lut)
+        if (cache.size < 1 << 20) cache.set(chave, v)
+      }
+      buf[o] = v[0]
+      buf[o + 1] = v[1]
+      buf[o + 2] = v[2]
+    }
+    aplicado.push({ etapa: 'lut', arquivo: caminhoLut, tamanho: lut.n })
+  }
+
+  // Normalização de níveis vem logo depois do LUT: o preset foi desenhado para
+  // um RAW já com preto e branco no lugar, e a curva dele levanta o preto de
+  // propósito. Rodar a exposição DEPOIS do preset desfaz exatamente isso — na
+  // primeira tentativa o preto voltou de 8 para 58. Erro pago em 2026-08-08.
+  normalizarNiveis()
+
+  // Ordem que o Daniel definiu: LUT (curva da câmera) primeiro, preset depois,
+  // ajustes finais por último. O preset é de Rec709 revelado — entrar antes do
+  // LUT seria aplicá-lo em log.
+  if (op.preset) {
+    const preset = lerPresetXmp(op.preset)
+    const forcaPreset = numero(op, 'preset-forca', 1)
+    if (forcaPreset < 0 || forcaPreset > 1) sairUso('--preset-forca entre 0 e 1')
+    const passos = aplicarPreset(buf, total, preset, forcaPreset)
+    aplicado.push({ etapa: 'preset', nome: preset.nome, forca: forcaPreset, passos, naoTransportado: preset.ignorados })
+  }
+
+  if (op.referencia) {
+    const alvo = await estatisticaRGB(arquivosDeImagem(op.referencia))
+    const soma = [0, 0, 0]
+    const soma2 = [0, 0, 0]
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      for (let k = 0; k < 3; k++) { soma[k] += buf[o + k]; soma2[k] += buf[o + k] * buf[o + k] }
+    }
+    const origem = [0, 1, 2].map((k) => {
+      const media = soma[k] / total
+      return { media, desvio: Math.sqrt(Math.max(1, soma2[k] / total - media * media)) }
+    })
+    for (let i = 0; i < total; i++) {
+      const o = i * 3
+      for (let k = 0; k < 3; k++) {
+        const casado = (buf[o + k] - origem[k].media) * (alvo[k].desvio / origem[k].desvio) + alvo[k].media
+        buf[o + k] += (casado - buf[o + k]) * forca
+      }
+    }
+    aplicado.push({ etapa: 'referencia', forca, alvo: alvo.map((a) => Math.round(a.media)) })
+  }
+
+  // (a normalização de níveis já rodou acima, antes do preset)
+
   if (curva > 0) {
     // Curva S ancorada nos extremos: o deslocamento é máximo em 0,25 e 0,75 e
     // vai a zero em 0 e 1, então preto e branco ficam onde a exposição colocou.
-    const tabela = new Uint8Array(256)
-    for (let v = 0; v < 256; v++) {
-      const x = v / 255
-      const y = x + curva * (x - 0.5) * (1 - Math.abs(2 * x - 1))
-      tabela[v] = Math.min(255, Math.max(0, Math.round(y * 255)))
-    }
-    for (let i = 0; i < total; i++) {
-      const o = i * C
-      px[o] = tabela[px[o]]
-      px[o + 1] = tabela[px[o + 1]]
-      px[o + 2] = tabela[px[o + 2]]
+    for (let i = 0; i < total * 3; i++) {
+      const x = Math.min(1, Math.max(0, buf[i] / 255))
+      buf[i] = (x + curva * (x - 0.5) * (1 - Math.abs(2 * x - 1))) * 255
     }
     aplicado.push({ etapa: 'curva', valor: curva })
   }
@@ -601,20 +848,18 @@ async function cor(pos, op) {
     const medir = () => {
       let soma = 0
       for (let i = 0; i < total; i++) {
-        const o = i * C
-        const max = Math.max(px[o], px[o + 1], px[o + 2])
-        const min = Math.min(px[o], px[o + 1], px[o + 2])
-        soma += max === 0 ? 0 : (max - min) / max
+        const o = i * 3
+        const max = Math.max(buf[o], buf[o + 1], buf[o + 2])
+        const min = Math.min(buf[o], buf[o + 1], buf[o + 2])
+        soma += max <= 0 ? 0 : (max - min) / max
       }
       return (soma / total) * 100
     }
     const aplicarGanho = (k) => {
       for (let i = 0; i < total; i++) {
-        const o = i * C
-        const cinza = 0.2126 * px[o] + 0.7152 * px[o + 1] + 0.0722 * px[o + 2]
-        for (let c = 0; c < 3; c++) {
-          px[o + c] = Math.min(255, Math.max(0, Math.round(cinza + (px[o + c] - cinza) * k)))
-        }
+        const o = i * 3
+        const cinza = 0.2126 * buf[o] + 0.7152 * buf[o + 1] + 0.0722 * buf[o + 2]
+        for (let c = 0; c < 3; c++) buf[o + c] = cinza + (buf[o + c] - cinza) * k
       }
     }
     if (saturacao === 'auto') {
@@ -636,7 +881,27 @@ async function cor(pos, op) {
     }
   }
 
-  let img = sharp(px, { raw: { width: W, height: H, channels: C } })
+  // Quantização única, com dither de ±0,5 LSB: sem ele, gradiente amplo (céu ao
+  // entardecer) ainda mostra degrau na volta para 8 bits. Semente fixa, para a
+  // peça sair idêntica em toda montagem.
+  const saidaPx = Buffer.alloc(total * C)
+  let semente = 0x2545f491
+  const ruido = () => {
+    semente ^= semente << 13; semente >>>= 0
+    semente ^= semente >> 17
+    semente ^= semente << 5; semente >>>= 0
+    return semente / 0xffffffff - 0.5
+  }
+  for (let i = 0; i < total; i++) {
+    const o = i * 3
+    const d = i * C
+    for (let c = 0; c < 3; c++) {
+      saidaPx[d + c] = Math.min(255, Math.max(0, Math.round(buf[o + c] + ruido())))
+    }
+    if (alfa) saidaPx[d + 3] = alfa[i]
+  }
+
+  let img = sharp(saidaPx, { raw: { width: W, height: H, channels: C } })
   if (nitidez > 0) {
     // Sharpen por último, depois de cor: afiar antes faz a curva e a saturação
     // trabalharem em cima do halo. Frame 16:9 vira 3:4 com upscale de ~1,33×
