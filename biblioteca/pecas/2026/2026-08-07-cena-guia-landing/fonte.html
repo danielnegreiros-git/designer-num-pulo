@@ -22,14 +22,22 @@
   .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: #F6F2EA; }
   #tela-nb { width: 1363px; height: 832px; border-radius: 8px; }
   #tela-nb img { display: block; width: 1363px; }
-  #tela-ph { width: 137px; height: 261px; border-radius: 9px; }
-  #tela-ph img { display: block; width: 137px; margin: -28px 0 0 0; }
+  #tela-ph { width: 137px; height: 284px; border-radius: 14px; }
+  #tela-ph img { display: block; width: 145px; margin: -29px 0 0 -4px; }
+  /* Ilha da câmera repintada da base por cima do conteúdo (hardware flutua sobre o app) */
+  #ilha {
+    position: absolute; left: 967px; top: 358px; width: 81px; height: 26px;
+    background-image: url('cena-base-ia.png');
+    background-size: 1272px 848px;
+    background-position: -1003px -382px;
+  }
 </style>
 </head>
 <body>
   <img class="base" src="cena-base-ia.png" alt="">
   <div class="tela" id="tela-nb"><img src="tela-roteiro-desktop.png" alt=""></div>
   <div class="tela" id="tela-ph"><img src="tela-patacho.jpg" alt=""></div>
+  <div id="ilha"></div>
   <script>
     function adj(m) {
       return [
@@ -87,10 +95,10 @@
       + xBot + 'px ' + yBot + 'px, -20px ' + yBot + 'px)';
     aplicar(nb, tNb);
 
-    // Celular: bordas paralelas (fone quase frontal, varredura de pixels);
-    // conteúdo começa abaixo da ilha da câmera (base creme aparece em volta dela).
+    // Celular: conteúdo cobre o vidro inteiro (como app real); a ilha é repintada
+    // por cima pelo #ilha. Bordas todas varridas de dentro para fora.
     aplicar(document.getElementById('tela-ph'),
-      homografia(137, 261, [940,385, 1064,387, 932,621, 1055,630]));
+      homografia(137, 284, [941,365, 1065,368, 932,622, 1055,629]));
   </script>
 </body>
 </html>
