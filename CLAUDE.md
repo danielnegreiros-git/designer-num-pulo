@@ -187,16 +187,19 @@ descer um degrau quando o de cima não tiver a cena.**
 | # | Fonte | Onde | Tratamento |
 |---|---|---|---|
 | 1 | **Foto pronta** | `<destino>/Fotografia/` | **nenhum.** Já saiu tratada, só recomprime |
-| 2 | **Frame de vídeo** | `<destino>/Bruto */`, achado pelo `_index` | `cor --perfil bruto-canon` (C-Log3 → Rec709) |
-| 3 | **Foto de iPhone** (`.heic`, `.dng`) | `<destino>/Bruto */iPhone */` | `cor --perfil iphone` |
+| 2 | **Foto de iPhone** (`.heic`, `.dng`) | `<destino>/Bruto */iPhone */` | `cor --perfil iphone` |
+| 3 | **Frame de vídeo** | `<destino>/Bruto */`, achado pelo `_index` | `cor --perfil bruto-canon` (C-Log3 → Rec709) |
 | 4 | **RAW da R6** (`.CR3`) | `<destino>/Bruto */Canon R6/` | `cor --perfil raw-canon` |
 
-Frame de vídeo perde para foto sempre que houver foto da cena: vem de 16:9,
-sofre upscale de ~1,33× no 3:4 e não tem o micro-detalhe da foto.
+**Frame de vídeo é a última opção fotográfica, não a segunda.** Vem de 16:9 e
+sofre upscale de ~1,33× para caber no vertical do carrossel — foto de iPhone é
+foto em resolução plena, sem ampliação, e ganha dele mesmo vindo de sensor
+menor. Os quatro slides que o Daniel reprovou em 2026-08-08 eram os quatro que
+usavam frame.
 
-iPhone na frente do CR3 é decisão do Daniel (2026-08-08): o CR3 é material sem
-tratamento nenhum, e a foto de iPhone chega mais perto do padrão do canal com
-menos intervenção.
+CR3 fica por último porque é o único material sem tratamento nenhum: exige
+revelação e ainda assim chega mais longe do padrão do canal que uma foto de
+iPhone. Ordem confirmada pelo Daniel em 2026-08-08.
 
 ### O que cada tratamento faz, e por quê
 
