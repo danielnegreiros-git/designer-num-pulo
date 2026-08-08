@@ -17,6 +17,11 @@ Peças em `biblioteca/pecas/2026/`:
 
 Templates: `mockup-tela-em-cena/` e `carrossel-foto-sangrada/`.
 
+**Primeira calibração da `num-pulo-brand-guidelines` feita (2026-08-08):** o
+carrossel da skill passou de 1:1 para 3:4, com a escala tipográfica e a regra do
+itálico do padrão real. Changelog no topo da skill, registro em
+`biblioteca/calibracoes/`. Skill, template e peça dizem a mesma coisa.
+
 ## O que este worker sabe fazer agora
 
 Tudo em `tools/render.mjs`, tudo medido em vez de julgado a olho:
@@ -49,10 +54,6 @@ thumbnail de YouTube, e a primeira calibração da `num-pulo-brand-guidelines`.
 
 ## Situações em aberto
 
-- **Calibração da skill, pendente do Daniel.** Três divergências entre o padrão real
-  de carrossel e a `num-pulo-brand-guidelines`, com a medição que as sustenta, em
-  `biblioteca/calibracoes/2026-08-08-proposta-carrossel-no-brandguide.md`. A skill
-  não foi tocada; o arquivo diz o que editar se ele aprovar.
 - **Look de cor.** O Daniel vai exportar um HALD revelado com o preset dele; o
   identity está em `presets-luts/hald-identity-nivel8.png` e os frames de partida
   (só LUT aplicado) em `presets-luts/so-lut-clog3-rec709/`. Enquanto não vem, frame

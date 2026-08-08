@@ -1,8 +1,9 @@
-# Proposta de calibração — carrossel na `num-pulo-brand-guidelines`
+# Calibração — carrossel na `num-pulo-brand-guidelines`
 
 **Data:** 2026-08-08
-**Alcance:** skill global `num-pulo-brand-guidelines`, seções 2, 10.2 e 13.3
-**Estado:** **PENDENTE — a skill não foi tocada.** Depende de decisão do Daniel.
+**Alcance:** skill global `num-pulo-brand-guidelines`, seções 2, 10.2, 13.2 e 13.3
+**Estado:** **APLICADO.** Aprovado pelo Daniel em 2026-08-08 (*"pode editar, esse
+é o padrão do carrossel"*). Changelog datado no topo da skill.
 
 ## O problema
 
@@ -29,14 +30,26 @@ Calibrar a skill para o padrão real, nos três pontos. A alternativa — mudar 
 canal para caber na skill — significaria refazer o formato que já funciona no
 feed, sem ganho.
 
-## Se o Daniel aprovar
+## O que foi editado
 
-1. Editar as seções 2, 10.2 e 13.3 de
-   `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md`.
-2. Changelog datado dentro da skill (exigência da regra 6).
-3. Marcar este arquivo como `aplicado` e anotar o que foi editado.
-4. Alinhar `templates/carrossel-foto-sangrada/manifest.md`, que hoje registra a
-   divergência como aberta.
+Em `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md`:
+
+- **Seção 2** — itálico do Instrument Serif passou de "uma palavra" para "trecho
+  curto, de uma a três palavras".
+- **Seção 10.2** — deixou de ser "1:1 Square". Virou 3:4 com a grade completa
+  (margem 120, coluna 780, bloco rodapé 132, bloco topo 172, faixa do split 720),
+  as três estruturas de slide com os tamanhos reais, o rótulo de contexto, a
+  assinatura e duas regras de legibilidade que saíram de erro pago aqui: vinheta
+  dimensionada por medição da foto (brilho **e** detalhe) e texto nunca sobre
+  rosto.
+- **Seção 13.2** — tabela do carrossel reescrita, com o split corrigido de
+  "vertical" para **horizontal** (duas faixas de 720px), que é como o canal usa.
+- **Seção 13.3** — linhas de cover e slide de carrossel com os valores reais.
+- **Changelog datado** no topo da skill, com a tabela do que mudou e o link para
+  este arquivo.
+
+Alinhados no mesmo commit: `templates/carrossel-foto-sangrada/manifest.md` (não
+registra mais a divergência como aberta) e `docs/handoff.md`.
 
 ## Evidência
 

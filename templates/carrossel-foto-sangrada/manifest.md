@@ -19,8 +19,9 @@ Promovido a template por decisão dele em 2026-08-08, na primeira ocorrência.
 | Bloco no topo | `top: 172px` |
 | Faixa do split | 720px cada |
 
-**Não é 1:1.** A seção 10.2 da `num-pulo-brand-guidelines` especifica 1080×1080; o
-padrão real do canal é 3:4. Divergência aberta para calibração da skill.
+**Não é 1:1 nem 4:5.** A `num-pulo-brand-guidelines` foi calibrada em 2026-08-08
+para este formato (seções 2, 10.2, 13.2 e 13.3) — skill e template dizem a mesma
+coisa. Registro: `biblioteca/calibracoes/2026-08-08-proposta-carrossel-no-brandguide.md`.
 
 ## Tipografia
 
