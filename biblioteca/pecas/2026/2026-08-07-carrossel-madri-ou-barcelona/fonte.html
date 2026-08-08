@@ -1,0 +1,297 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carrossel — Madri ou Barcelona</title>
+<link rel="stylesheet" href="../../../../assets/fonts.css">
+<link rel="stylesheet" href="../../../../design-system/tokens.css">
+<style>
+  /* Carrossel Instagram 1080x1440 (3:4) — padrão herdado do carrossel Gramado.
+     Render: --largura 1080 --altura 14400 --escala 2 --pagina-inteira, depois recortar
+     10 quadros de 2160x2880. Cada .slide tem exatamente 1440px, sem gap. */
+  :root {
+    --margem: 120px;
+    --coluna: 780px;
+    --titulo: 96px;
+    --corpo: 30px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #000; }
+  body { width: 1080px; }
+
+  .slide {
+    position: relative;
+    width: 1080px;
+    height: 1440px;
+    overflow: hidden;
+    color: #fff;
+  }
+  .foto {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+  /* split: duas faixas de 720px */
+  .faixa { position: absolute; left: 0; width: 1080px; height: 720px; overflow: hidden; }
+  .faixa.topo { top: 0; }
+  .faixa.base { top: 720px; }
+  .faixa img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* vinhetas — escurecem só o lado que recebe texto */
+  .vin-baixo, .vin-cima, .vin-meio { position: absolute; left: 0; width: 100%; pointer-events: none; }
+  .vin-baixo {
+    bottom: 0; height: 78%;
+    background: linear-gradient(to top, rgba(0,0,0,.72) 0%, rgba(0,0,0,.46) 34%, rgba(0,0,0,.16) 62%, transparent 100%);
+  }
+  .vin-cima {
+    top: 0; height: 66%;
+    background: linear-gradient(to bottom, rgba(0,0,0,.68) 0%, rgba(0,0,0,.36) 42%, transparent 100%);
+  }
+  .vin-meio {
+    top: 0; height: 100%;
+    background: linear-gradient(to bottom, rgba(0,0,0,.26) 0%, rgba(0,0,0,.14) 22%, rgba(0,0,0,.72) 44%, rgba(0,0,0,.72) 57%, rgba(0,0,0,.30) 72%, rgba(0,0,0,.80) 100%);
+  }
+  /* reforço de topo — garante o marcador legível sobre céu ou parede clara */
+  .vin-topo {
+    top: 0; height: 24%;
+    background: linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.16) 52%, transparent 100%);
+  }
+
+  /* bloco de texto */
+  .bloco {
+    position: absolute;
+    left: var(--margem);
+    width: var(--coluna);
+    z-index: 2;
+  }
+  .bloco.baixo  { bottom: 132px; }
+  .bloco.cima   { top: 128px; }
+  .bloco.centro { top: 50%; transform: translateY(-50%); }
+
+  .marcador {
+    position: absolute;
+    top: 64px;
+    left: var(--margem);
+    z-index: 2;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: .30em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.92);
+  }
+  .marcador::before {
+    content: '';
+    display: inline-block;
+    width: 34px;
+    height: 2px;
+    background: #fff;
+    vertical-align: middle;
+    margin-right: 16px;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: var(--titulo);
+    line-height: 1.02;
+    margin: 0 0 30px;
+    letter-spacing: -.005em;
+    text-wrap: balance;
+  }
+  h2 em { font-style: italic; }
+
+  p {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: var(--corpo);
+    line-height: 1.44;
+    margin: 0;
+    color: rgba(255,255,255,.96);
+  }
+  p strong { font-weight: 600; color: #fff; }
+  p + p { margin-top: 22px; }
+
+  .anton {
+    font-family: 'Anton', sans-serif;
+    text-transform: uppercase;
+    font-weight: 400;
+    line-height: .92;
+    letter-spacing: .004em;
+    margin: 0;
+  }
+
+  /* slide 1 */
+  .capa .anton { font-size: 148px; }
+  .capa .ou {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 84px;
+    line-height: 1;
+    display: block;
+    margin: 6px 0 4px 6px;
+  }
+
+  /* slide 10 */
+  .opcoes { margin: 0 0 44px; padding: 0; list-style: none; }
+  .opcoes li {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    font-size: 36px;
+    line-height: 1.25;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: baseline;
+    gap: 22px;
+  }
+  .opcoes .seta { font-weight: 400; font-size: 32px; opacity: .9; }
+  .opcoes .emoji { font-size: 38px; vertical-align: -.08em; margin-left: 4px; }
+  .assinatura {
+    position: absolute;
+    left: var(--margem);
+    bottom: 62px;
+    z-index: 2;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 400;
+    font-size: 24px;
+    letter-spacing: .04em;
+    color: rgba(255,255,255,.88);
+  }
+</style>
+</head>
+<body>
+
+<!-- 01 — as duas / capa sem rosto -->
+<section class="slide capa">
+  <div class="faixa topo"><img src="imagens/s01-madri-metropolis.jpg" style="object-position: 50% 42%"></div>
+  <div class="faixa base"><img src="imagens/s01-bcn-sagrada.jpg" style="object-position: 50% 44%"></div>
+  <div class="vin-meio"></div>
+  <div class="bloco centro" style="top: 47%">
+    <p class="anton">Madri</p>
+    <span class="ou">ou</span>
+    <p class="anton">Barcelona?</p>
+  </div>
+  <div class="bloco baixo" style="bottom: 112px">
+    <p>A gente ficou três dias em cada cidade, uma logo após a outra. <strong>E olha, dá pra errar feio nessa escolha, viu?</strong> Vem que eu conto.</p>
+  </div>
+</section>
+
+<!-- 02 — as duas -->
+<section class="slide">
+  <img class="foto" src="imagens/s02-calcada.jpg" style="object-position: 50% 46%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri × Barcelona</div>
+  <div class="bloco baixo">
+    <h2>A diferença é o que você faz <em>o dia todo</em></h2>
+    <p>Em Barcelona tem aqueles lugares que você precisa ver, né? Aquela listinha. <strong>Madri quase não tem nenhum, e isso muda a viagem inteira.</strong></p>
+  </div>
+</section>
+
+<!-- 03 — Barcelona -->
+<section class="slide">
+  <img class="foto" src="imagens/s03-casa-batllo.jpg" style="object-position: 50% 38%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Barcelona</div>
+  <div class="bloco baixo">
+    <h2>Em Barcelona a arquitetura é <em>coisa séria</em></h2>
+    <p>Casa Batlló, Casa Milà, Sagrada Família. E nem precisa entrar em tudo, viu? Só de andar pelo Passeig de Gràcia você já para na calçada pra olhar prédio.</p>
+  </div>
+</section>
+
+<!-- 04 — Madri -->
+<section class="slide">
+  <img class="foto" src="imagens/s04-gran-via.jpg" style="object-position: 50% 40%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri</div>
+  <div class="bloco baixo">
+    <h2>Madri <em>não tem</em> cartão-postal</h2>
+    <p>Em Paris tem a Torre Eiffel, em Barcelona a Sagrada Família, e Madri quase não tem nenhum. <strong>A gente chegou achando que por isso ia ser uma cidade sem graça.</strong></p>
+  </div>
+</section>
+
+<!-- 05 — Madri -->
+<section class="slide">
+  <img class="foto" src="imagens/s05-taberna.jpg" style="object-position: 50% 50%">
+  <div class="vin-cima"></div>
+  <div class="marcador" style="color: rgba(255,255,255,.95)">Madri</div>
+  <div class="bloco cima" style="top: 172px">
+    <h2>Aí a gente <em>entendeu</em> Madri</h2>
+    <p>Só que ela é pra ser vivida, sabe? Café de manhã, mercado no almoço, galeria à tarde e calçada larga pra andar sem pressa. A gente saiu de lá gostando muito.</p>
+  </div>
+</section>
+
+<!-- 06 — Madri -->
+<section class="slide">
+  <img class="foto" src="imagens/s06-mercado.jpg" style="object-position: 50% 48%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri</div>
+  <div class="bloco baixo">
+    <h2>Agora, comida é <em>outro papo</em></h2>
+    <p>Em Madri o almoço vira tapa, aquele petisquinho que acompanha a bebida, e você vai pegando um em cada balcão até encher. <strong>O Mercado de San Miguel é lindo mas lota, vá cedo.</strong></p>
+  </div>
+</section>
+
+<!-- 07 — Barcelona -->
+<section class="slide">
+  <img class="foto" src="imagens/s07-pao-tomate.jpg" style="object-position: 50% 55%">
+  <div class="vin-cima"></div>
+  <div class="marcador">Barcelona</div>
+  <div class="bloco cima" style="top: 172px">
+    <h2 style="font-size: 86px">Em Barcelona a gente não parou de falar <em>do pão</em></h2>
+    <p>Teve paella dividida na mesa inteira, mas o pão com tomate de fermentação natural virou o legado da viagem. Só cuidado com as mesas de fora, que fumam muito.</p>
+  </div>
+</section>
+
+<!-- 08 — Madri -->
+<section class="slide">
+  <img class="foto" src="imagens/s08-sala-equis.jpg" style="object-position: 50% 50%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri</div>
+  <div class="bloco baixo">
+    <h2>O lugar que a gente <em>mais amou</em> foi em Madri</h2>
+    <p>A Sala Equis era um cinema adulto que fechou e virou um bar num porão, com filme antigo passando na tela e pipoca na mão. <strong>Amei de cara.</strong></p>
+  </div>
+</section>
+
+<!-- 09 — as duas -->
+<section class="slide">
+  <div class="faixa topo"><img src="imagens/s09-bcn-passeig.jpg" style="object-position: 50% 46%"></div>
+  <div class="faixa base"><img src="imagens/s09-mad-rua.jpg" style="object-position: 50% 46%"></div>
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri × Barcelona</div>
+  <div class="bloco baixo">
+    <h2 style="margin-bottom: 26px">Então, <em>qual dos dois?</em></h2>
+    <p>Olha, primeira vez na Europa e querendo ver o que todo mundo conhece? <strong>Barcelona.</strong> Já Madri é pra quem quer sair andando sem rumo e ver no que dá.</p>
+  </div>
+</section>
+
+<!-- 10 — CTA -->
+<section class="slide">
+  <img class="foto" src="imagens/s10-casal.jpg" style="object-position: 50% 42%">
+  <div class="vin-baixo"></div>
+  <div class="vin-topo"></div>
+  <div class="marcador">Madri × Barcelona</div>
+  <div class="bloco baixo" style="bottom: 168px">
+    <h2 style="font-size: 88px">E você, <em>time Madri ou time Barcelona?</em></h2>
+    <ul class="opcoes">
+      <li><span class="seta">→</span> <span>Time Madri <span class="emoji">🍷</span></span></li>
+      <li><span class="seta">→</span> <span>Time Barcelona <span class="emoji">🏛️</span></span></li>
+    </ul>
+    <p>Conta aqui embaixo qual você escolheria. E se tiver na dúvida, diz quantos dias você tem de viagem que a gente te ajuda a decidir.</p>
+  </div>
+  <div class="assinatura">@numpulo</div>
+</section>
+
+</body>
+</html>

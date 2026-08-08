@@ -73,6 +73,30 @@ peça desse tipo segue `templates/mockup-tela-em-cena/manifest.md`.
    arriscadas" deixou passar três defeitos seguidos, e o defeito estava sempre na
    zona que ficou de fora.
 
+## Carrossel de Instagram
+
+Padrão de referência do Daniel: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
+Peça de origem no repo: `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`.
+
+- **2160×2880 (3:4)**, não 1:1. Foto sangrada, texto só branco, vinheta no lado do texto.
+- Normalizado a 1080 de largura: margem 120px, coluna 780px, título Instrument Serif 96px
+  (`line-height` 1.02), corpo Poppins 30px (1.44). Anton só na capa.
+- Fonte é **um** HTML com os slides empilhados; render de 1080×(1440·N) e recorte por
+  `render.mjs recortar`. Um HTML por slide multiplica o mesmo CSS por dez.
+- **Entrega em JPG q95.** Foto sangrada não tem área chapada: PNG pesa 6× e o Instagram
+  recomprime na subida.
+
+## Foto do acervo em peça
+
+- **Frame de vídeo sai em log** (Canon R6). Cru ao lado de foto exportada, a peça fica com
+  dois padrões de cor. Grade na extração, validado em 2026-08-08:
+  `-vf "eq=contrast=1.45:saturation=1.55:gamma=0.95,curves=all='0/0 0.2/0.14 0.5/0.52 0.8/0.86 1/1'"`
+- **Achar o frame pelo índice, não abrindo vídeo**: destinos indexados pelo `edicao-num-pulo`
+  têm `_index/<cidade>/index.csv`, uma linha por clipe com `landmark`, `descricao`, `plano`,
+  `classe` (broll/fala) e caminho. Busca por texto chega direto no clipe.
+- Escolha de imagem se faz em **contact sheet**, não abrindo arquivo por arquivo: gerar HTML
+  em grade com as candidatas e renderizar (ver `montar.ps1` e o brief da peça de carrossel).
+
 ## Dois sistemas visuais — roteamento
 
 - **Default**: skill global `num-pulo-brand-guidelines` (Indigo `#2A0082`, Anton/Instrument Serif/Poppins) — conteúdo, social, marketing, mídia kit, produto editorial.
