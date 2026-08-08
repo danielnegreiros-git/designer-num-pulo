@@ -49,10 +49,15 @@ thumbnail de YouTube, e a primeira calibração da `num-pulo-brand-guidelines`.
 
 ## Situações em aberto
 
-- **Calibração da skill, pendente do Daniel.** O padrão Gramado diverge da
-  `num-pulo-brand-guidelines` em três pontos: formato de carrossel (3:4 contra
-  1080×1080 da seção 10.2), escala tipográfica (96/30 contra 36–48/15–16 da 13.3) e
-  itálico em trecho, não em uma palavra (seção 2). A skill não foi tocada.
+- **Calibração da skill, pendente do Daniel.** Três divergências entre o padrão real
+  de carrossel e a `num-pulo-brand-guidelines`, com a medição que as sustenta, em
+  `biblioteca/calibracoes/2026-08-08-proposta-carrossel-no-brandguide.md`. A skill
+  não foi tocada; o arquivo diz o que editar se ele aprovar.
+- **`impeccable` antes do render de toda peça** (regra 1 do sistema de qualidade) não
+  foi cumprida como está escrita: rodou uma vez, no começo do carrossel, e nas quatro
+  rodadas de calibração seguintes o que pegou defeito foi medição (`analisar`,
+  `checar`), não a skill. Ou a regra passa a valer só para peça de formato novo, ou
+  volta a valer sempre — decisão do Daniel, não minha.
 - **Look de cor.** O Daniel vai exportar um HALD revelado com o preset dele; o
   identity está em `presets-luts/hald-identity-nivel8.png` e os frames de partida
   (só LUT aplicado) em `presets-luts/so-lut-clog3-rec709/`. Enquanto não vem, frame

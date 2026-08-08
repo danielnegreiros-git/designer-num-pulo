@@ -50,6 +50,13 @@ Mudança exige decisão nova, com data e autor.
    Convenção: dentro da pasta do destino normalmente existe uma pasta `fotografia`;
    priorizar as fotos exportadas. **Somente leitura.** Sem índice próprio na
    fase 1; índice vira decisão do Daniel se a busca virar gargalo real.
+
+   > **Revisado em 2026-08-08 pelo Daniel.** O gargalo apareceu na primeira peça
+   > de carrossel: a peça usou frame de vídeo em quatro slides enquanto havia 63
+   > fotos tratadas de Barcelona paradas numa pasta que ninguém tinha varrido.
+   > Passou a existir índice próprio de fotos (`render.mjs indexar-fotos`), e a
+   > ordem de fonte virou premissa: foto pronta → iPhone → frame de vídeo → RAW.
+   > Detalhe operacional no CLAUDE.md, seção "Acervo de imagem".
 7. **Este worker é o curador da skill `num-pulo-brand-guidelines`** — mesmo modelo
    do socialmedia com as skills de texto: mudança só com changelog datado na skill
    e registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo
@@ -71,6 +78,14 @@ Mudança exige decisão nova, com data e autor.
    para imagery de apoio (mockup de produto, background abstrato) — nunca para
    fabricar um lugar que não existe ou não é daquele jeito.
 4. **Acervo de fotos é somente leitura.** Nenhuma escrita em `H:`, `Y:` ou `D:`.
+
+   > **Exceção aberta pelo Daniel em 2026-08-08**, única até aqui:
+   > `render.mjs indexar-fotos` grava o índice de fotos em
+   > `<destino>/_index/fotos/` e em nenhum outro lugar — mesma pasta onde o
+   > `edicao-num-pulo` já mantém o índice de vídeo. Nenhuma imagem do acervo é
+   > criada, movida ou alterada. Registro em
+   > `biblioteca/calibracoes/2026-08-08-excecao-regra-4-indice-de-fotos.md`.
+   > Exceção nova exige decisão dele, com o mesmo rastro.
 5. **Credencial e dado sensível fora do git** (`.env` gitignored).
 6. **Skill global só muda com rastro** (decisão 7).
 

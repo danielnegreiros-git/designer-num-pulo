@@ -22,7 +22,7 @@ Aprovadas pelo Daniel em 2026-08-07 (spec, seção 4).
    em `<destino>/_index/fotos/` e em nenhum outro lugar. Nenhuma imagem é criada, movida
    ou alterada. Exceção nova exige decisão dele, com o mesmo rastro.
 5. **Credencial fora do git** (`.env` gitignored).
-6. **A skill global `num-pulo-brand-guidelines` só muda com rastro**: changelog datado na skill + registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo rastro. Este worker é o curador dela.
+6. **A skill global `num-pulo-brand-guidelines` só muda com rastro**: changelog datado na skill + registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo rastro. Este worker é o curador dela. **`biblioteca/calibracoes/` também guarda o que ainda não virou decisão**: divergência achada entre a skill e o padrão real entra lá como proposta pendente, com a medição que a sustenta, em vez de ficar só na cabeça de uma sessão. Há uma aberta hoje (carrossel: formato, escala tipográfica, itálico).
 
 ## Motor e ferramenta
 
