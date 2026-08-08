@@ -1,3 +1,6 @@
 .env
 node_modules/
 .playwright-mcp/
+
+# previews de auditoria: gerados por montar.ps1 -Preview, nao sao entrega
+**/saida/_preview-*.jpg
