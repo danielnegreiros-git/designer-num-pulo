@@ -36,4 +36,12 @@ asset visual.
 
 ## Saída
 
-`saida/mockup-guia-landing-2400x1600.png` (+ variante com logo, se aprovada)
+Duas versões, aguardando escolha/ok do Daniel:
+
+- `saida/mockup-guia-landing-2400x1600.png` — v1 "telas em cena": foto de Noronha
+  (landing) + mockup das 4 telas. 100% real, sem IA.
+- `saida/mockup-guia-mao-2400x1600.png` — v2 "celular na mão": base gerada no
+  ChatGPT pelo Daniel em 2026-08-07 (`base-mao-ia.png`; mão + iPhone com tela em
+  branco, praia genérica desfocada — imagery de apoio, dentro da regra 3) +
+  screenshot real do app (`tela-dia01.jpg`, guia.numpulo.com.br, jul/2026)
+  composto por homografia CSS (`fonte-mao.html`). Ambas com webp de entrega.

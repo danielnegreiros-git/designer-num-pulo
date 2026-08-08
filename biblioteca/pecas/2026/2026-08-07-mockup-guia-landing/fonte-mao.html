@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Mockup Guia — celular na mão</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1200px; height: 800px; overflow: hidden; background: #14101D; position: relative; }
+  img.base { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  /* Caixa da tela: transformada por homografia para casar com os 4 cantos da tela do iPhone */
+  .tela {
+    position: absolute; left: 0; top: 0;
+    width: 223px; height: 478px;
+    overflow: hidden; border-radius: 10px 10px 30px 30px;
+    background: #F6F2EA;
+  }
+  .tela img {
+    display: block; width: 246px;
+    margin: -52px 0 0 -11px; /* corta Safari + header do app do screenshot */
+  }
+</style>
+</head>
+<body>
+  <img class="base" src="base-mao-ia.png" alt="">
+  <div class="tela" id="tela"><img src="tela-dia01.jpg" alt=""></div>
+  <script>
+    // Homografia 4 pontos → matrix3d (método do adjugado)
+    function adj(m) {
+      return [
+        m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+        m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+        m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]
+      ];
+    }
+    function multmm(a, b) {
+      const c = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        let s = 0;
+        for (let k = 0; k < 3; k++) s += a[3*i+k]*b[3*k+j];
+        c[3*i+j] = s;
+      }
+      return c;
+    }
+    function multmv(m, v) {
+      return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]];
+    }
+    function basisToPoints(x1,y1,x2,y2,x3,y3,x4,y4) {
+      const m = [x1,x2,x3, y1,y2,y3, 1,1,1];
+      const v = multmv(adj(m), [x4,y4,1]);
+      return multmm(m, [v[0],0,0, 0,v[1],0, 0,0,v[2]]);
+    }
+    function transform2d(elt, x1,y1, x2,y2, x3,y3, x4,y4) {
+      const w = elt.offsetWidth, h = elt.offsetHeight;
+      const s = basisToPoints(0,0, w,0, 0,h, w,h);
+      const d = basisToPoints(x1,y1, x2,y2, x3,y3, x4,y4);
+      let t = multmm(d, adj(s));
+      for (let i = 0; i < 9; i++) t[i] /= t[8];
+      t = [t[0],t[3],0,t[6], t[1],t[4],0,t[7], 0,0,1,0, t[2],t[5],0,t[8]];
+      elt.style.transformOrigin = '0 0';
+      elt.style.transform = 'matrix3d(' + t.join(',') + ')';
+    }
+    // Cantos da tela do iPhone no quadro 1200×800: TL, TR, BL, BR
+    transform2d(document.getElementById('tela'),
+      693,146,  911,134,  722,606,  948,593);
+  </script>
+</body>
+</html>
