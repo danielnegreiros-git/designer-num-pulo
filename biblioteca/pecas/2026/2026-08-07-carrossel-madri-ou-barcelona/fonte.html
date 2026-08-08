@@ -46,7 +46,7 @@
      que leva o texto. A conta cobre brilho e detalhe — o título do slide 3 caiu
      numa faixa escura o bastante pela média e mesmo assim não lia, porque a
      fachada da Casa Batlló tem detalhe 55. Erro pago em 2026-08-08. */
-  .vin-baixo, .vin-cima, .vin-meio { position: absolute; left: 0; width: 100%; pointer-events: none; }
+  .vin-baixo, .vin-cima, .vin-meio, .vin-topo { position: absolute; left: 0; width: 100%; pointer-events: none; }
   .slide { --scrim: .55; }
   /* O scrim fica CHEIO ao longo de todo o bloco de texto e só decai acima dele.
      Gradiente que começa a cair na base entrega metade do valor medido na
@@ -80,10 +80,17 @@
       rgba(0,0,0,calc(var(--scrim) * .42)) 72%,
       rgba(0,0,0,calc(var(--scrim) * .95)) 100%);
   }
-  /* reforço de topo — garante o marcador legível sobre céu ou parede clara */
+  /* Reforço de topo, para o marcador. Também medido: .42 cobre céu e parede
+     clara, mas não cobre branco brilhante — no slide 8 o marcador cai sobre o
+     letreiro iluminado da Sala Equis (brilho 218, contraste 1,28) e some. Slide
+     nesse caso passa --scrim-topo com o valor de `analisar` para a linha 0. */
+  .slide { --scrim-topo: .42; }
   .vin-topo {
     top: 0; height: 24%;
-    background: linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.16) 52%, transparent 100%);
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,var(--scrim-topo)) 0%,
+      rgba(0,0,0,calc(var(--scrim-topo) * .38)) 52%,
+      transparent 100%);
   }
 
   /* bloco de texto */
@@ -269,7 +276,7 @@
 </section>
 
 <!-- 07 — Barcelona -->
-<section class="slide" style="--scrim: .37">
+<section class="slide" style="--scrim: .53">
   <img class="foto" src="imagens/s07-pao-tomate.jpg" style="object-position: 50% 55%">
   <div class="vin-cima"></div>
   <div class="marcador">Barcelona</div>
@@ -280,7 +287,7 @@
 </section>
 
 <!-- 08 — Madri -->
-<section class="slide" style="--scrim: .30">
+<section class="slide" style="--scrim: .18; --scrim-topo: .76">
   <img class="foto" src="imagens/s08-sala-equis.jpg" style="object-position: 50% 50%">
   <div class="vin-baixo"></div>
   <div class="vin-topo"></div>
@@ -292,7 +299,7 @@
 </section>
 
 <!-- 09 — as duas -->
-<section class="slide" style="--scrim: .55">
+<section class="slide" style="--scrim: .35">
   <div class="faixa topo"><img src="imagens/s09-bcn-passeig.jpg" style="object-position: 50% 46%"></div>
   <div class="faixa base"><img src="imagens/s09-mad-rua.jpg" style="object-position: 50% 46%"></div>
   <div class="vin-baixo"></div>
@@ -305,7 +312,7 @@
 </section>
 
 <!-- 10 — CTA -->
-<section class="slide" style="--scrim: .65">
+<section class="slide" style="--scrim: .69">
   <img class="foto" src="imagens/s10-casal.jpg" style="object-position: 50% 42%">
   <div class="vin-baixo"></div>
   <div class="vin-topo"></div>

@@ -25,14 +25,19 @@ Copy-Item "$dest\Fotografia\Mercado Madrid\NUM_0380.JPG" $ref -Force
 Copy-Item "$dest\Fotografia\Mercado Madrid\NUM_0406.JPG" $ref -Force
 
 # Frames de bruto: cidade + clipe. Frame tirado no meio do clipe.
+#
+# Frame de video nao aguenta ser protagonista de slide 3:4 ao lado de foto
+# exportada: vem de 16:9, sofre upscale de ~1,33x no recorte e nao tem o
+# micro-detalhe da foto. Onde existe foto do destino, usa-se foto. Onde nao
+# existe (Sala Equis, comida), escolhe-se o frame mais grafico e menos
+# dependente de detalhe fino. Os quatro slides que o Daniel reprovou em
+# 2026-08-08 eram exatamente os quatro cuja imagem principal era frame.
 $frames = [ordered]@{
   's01-madri-metropolis' = @('madrid',    'NUM_1451')
   's01-bcn-sagrada'      = @('barcelona', 'NUM_2785')
   's02-calcada'          = @('madrid',    'NUM_9943')
-  's07-pao-tomate'       = @('barcelona', 'NUM_2044')
-  's08-sala-equis'       = @('madrid',    'NUM_1222')
-  's09-bcn-passeig'      = @('barcelona', 'NUM_2604')
-  's10-casal'            = @('madrid',    'NUM_9907')
+  's07-pao-tomate'       = @('barcelona', 'NUM_2043')
+  's08-sala-equis'       = @('madrid',    'NUM_0918')
 }
 foreach ($nome in $frames.Keys) {
   $cidade, $id = $frames[$nome]
@@ -64,7 +69,9 @@ $fotos = [ordered]@{
   's04-gran-via'    = "$dest\Thumb\NUM_1511.JPG"
   's05-taberna'     = "$dest\Thumb\NUM_0097.JPG"
   's06-mercado'     = "$dest\Fotografia\Mercado Madrid\NUM_0380.JPG"
+  's09-bcn-passeig' = 'H:\Destinos\Barcelona 2022\Fotografia\Casa Batlo\NUM_2465.jpg'
   's09-mad-rua'     = "$dest\Thumb\NUM_0043.JPG"
+  's10-casal'       = 'H:\Destinos\Barcelona 2022\Fotografia\Casa Batlo\IMG_8003.jpg'
 }
 foreach ($nome in $fotos.Keys) {
   node $render tratar $fotos[$nome] --out (Join-Path $imagens "$nome.jpg") --qualidade 92 | Out-Null

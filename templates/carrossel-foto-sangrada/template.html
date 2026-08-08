@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -27,6 +27,7 @@
     overflow: hidden;
     color: #fff;
     --scrim: .55;
+    --scrim-topo: .42;
   }
   .foto {
     position: absolute;
@@ -77,10 +78,15 @@
       rgba(0,0,0,calc(var(--scrim) * .42)) 72%,
       rgba(0,0,0,calc(var(--scrim) * .95)) 100%);
   }
-  /* reforço de topo — garante o marcador legível sobre céu ou parede clara */
+  /* Reforço de topo, para o marcador. Também medido: .42 cobre céu e parede
+     clara, mas não cobre branco brilhante (letreiro aceso, brilho 218). Nesses
+     casos o slide passa --scrim-topo com o valor de `analisar` para a linha 0. */
   .vin-topo {
     top: 0; height: 24%;
-    background: linear-gradient(to bottom, rgba(0,0,0,.42) 0%, rgba(0,0,0,.16) 52%, transparent 100%);
+    background: linear-gradient(to bottom,
+      rgba(0,0,0,var(--scrim-topo)) 0%,
+      rgba(0,0,0,calc(var(--scrim-topo) * .38)) 52%,
+      transparent 100%);
   }
 
   .bloco {

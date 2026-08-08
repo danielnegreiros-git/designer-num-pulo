@@ -113,7 +113,16 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   preset e exporta PNG sem redimensionar; `cor --lut <hald-revelado.png>` aplica. Vale
   para qualquer editor que revele imagem, não só Lightroom.
 - **Frame 16:9 em slide 3:4 sofre upscale de ~1,33×** e nunca vai bater com foto nativa
-  vertical em detalhe fino. O sharpen compensa em parte; o limite é da fonte.
+  vertical em detalhe fino. O sharpen compensa em parte; o limite é da fonte. Por isso:
+  **onde existe foto do destino, usa-se foto.** Frame entra quando não há foto da cena —
+  e aí a escolha é o clipe mais **gráfico** (letreiro, silhueta, objeto em fundo escuro),
+  que depende menos de detalhe fino. Os quatro slides reprovados pelo Daniel em
+  2026-08-08 eram os quatro cuja imagem principal era frame; três tinham foto disponível
+  no acervo e ninguém tinha olhado.
+- **Acervo de um destino pode estar em mais de uma pasta e de mais de uma viagem.**
+  Barcelona tinha 63 fotos tratadas em `H:\Destinos\Barcelona 2022\Fotografia` enquanto a
+  peça usava frame de vídeo da viagem de 2025. Antes de recorrer a frame, varrer todas as
+  pastas do destino.
 - **Onde o texto vai numa foto é medição, não olho:** `render.mjs analisar <imagem>` devolve,
   por faixa, brilho, detalhe, concentração de pele e o **scrim** necessário para o branco
   bater contraste 4,5. O slide usa esse número em `--scrim`; vinheta chutada falhou em

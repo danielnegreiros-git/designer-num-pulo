@@ -53,10 +53,10 @@ Acervo somente leitura. Nada gerado por IA, nenhuma paisagem inventada.
 | 04 | Madri | `s04-gran-via.jpg` | foto `Espanha Nomad 2025/Thumb/NUM_1511.JPG` |
 | 05 | Madri | `s05-taberna.jpg` | foto `Espanha Nomad 2025/Thumb/NUM_0097.JPG` |
 | 06 | Madri | `s06-mercado.jpg` | foto `Espanha Nomad 2025/Fotografia/Mercado Madrid/NUM_0380.JPG` |
-| 07 | Barcelona | `s07-pao-tomate.jpg` | frame `NUM_2044` (pão rústico na mesa) |
-| 08 | Madri | `s08-sala-equis.jpg` | frame `NUM_1222` (Sala Equis) |
-| 09 | as duas | `s09-bcn-passeig.jpg` + `s09-mad-rua.jpg` | frame `NUM_2604` (Passeig de Gràcia) + foto `Thumb/NUM_0043.JPG` |
-| 10 | as duas | `s10-casal.jpg` | frame `NUM_9907` (os dois, Madri) |
+| 07 | Barcelona | `s07-pao-tomate.jpg` | frame `NUM_2043` (pão torrado no prato) |
+| 08 | Madri | `s08-sala-equis.jpg` | frame `NUM_0918` (letreiro aceso da Sala Equis) |
+| 09 | as duas | `s09-bcn-passeig.jpg` + `s09-mad-rua.jpg` | fotos `Barcelona 2022/Casa Batlo/NUM_2465.jpg` (Casa Milà) + `Thumb/NUM_0043.JPG` |
+| 10 | as duas | `s10-casal.jpg` | foto `Barcelona 2022/Casa Batlo/IMG_8003.jpg` (os dois) |
 
 Frames localizados pelo `_index` de `H:\Destinos\Espanha Nomad 2025\_index\{madrid,barcelona}\index.csv`
 (busca por landmark e descrição), extraídos no meio do clipe com `ffmpeg`.
@@ -86,10 +86,10 @@ recebe esse número em `--scrim`. Valores usados:
 | 04 | rodapé | .54 | vitrine acesa atrás |
 | 05 | rodapé | .20 | fachada preta; âncora no rodapé porque o rosto está no meio |
 | 06 | rodapé | .65 | banca de frutas, detalhe 48 |
-| 07 | topo | .37 | mesa clara embaixo |
-| 08 | rodapé | .30 | interior escuro |
-| 09 | rodapé | .55 | split |
-| 10 | rodapé | .65 | prédio claro e selfie |
+| 07 | topo | .53 | prato e mesa claros |
+| 08 | rodapé | .18 + topo .76 | interior escuro, mas letreiro aceso no topo (brilho 218) |
+| 09 | rodapé | .35 | split, faixa de baixo escura |
+| 10 | rodapé | .69 | fachada clara atrás dos dois |
 
 ## Como montar
 
@@ -143,6 +143,35 @@ do slide 7 artificial (a cena já estava em 31%, acima do alvo de 26%). Com `aut
 prato recebe ganho zero e o frame do Metropolis sobe de 16,9% para 24,7%.
 
 Nesta rodada a peça virou **`templates/carrossel-foto-sangrada/`**, por decisão dele.
+
+## Calibração do Daniel, 2026-08-08 (rodada 3)
+
+"Slides 7, 8, 9 e 10 estão ruins." Eram exatamente os quatro slides cuja imagem
+principal era **frame de vídeo**. A causa é da fonte, não do tratamento: frame vem de
+16:9, sofre upscale de ~1,33× para caber no 3:4 e não tem o micro-detalhe da foto. Ao
+lado de cinco slides com foto exportada, denuncia.
+
+Correção: onde existe foto do destino, usa-se foto. O acervo de Barcelona 2022 tem 63
+fotos tratadas e estava praticamente sem uso.
+
+| Slide | Era | Virou |
+|---|---|---|
+| 07 | frame `NUM_2044`, pão desfocado em luz baixa | frame `NUM_2043`, pão torrado em prato branco |
+| 08 | frame `NUM_1222`, parede rosada e plana | frame `NUM_0918`, letreiro aceso da Sala Equis |
+| 09 | frame `NUM_2604` na faixa de cima | foto `NUM_2465`, Casa Milà — as duas faixas passam a ser foto |
+| 10 | frame `NUM_9907`, selfie de grande angular | foto `IMG_8003`, os dois na Casa Batlló |
+
+Sobraram dois frames (07 e 08) porque não existe foto de comida nem da Sala Equis no
+acervo. Nos dois casos a escolha foi o frame **mais gráfico**, que depende menos de
+detalhe fino: prato em fundo escuro e letreiro tipográfico aceso.
+
+**Bug encontrado no caminho:** `.vin-topo` estava fora do seletor que aplica
+`position: absolute`, então a vinheta de reforço do topo nunca teve efeito, em nenhum
+slide, desde que foi criada. O marcador vinha lendo por sorte, pelo fundo da foto.
+Corrigido na peça e no template.
+
+O slide 10 passou a ser foto de Barcelona num slide de CTA neutro. Assumido: a foto dos
+dois juntos vale mais no CTA que a neutralidade de cidade, e o texto continua equilibrado.
 
 ## Pendências
 
