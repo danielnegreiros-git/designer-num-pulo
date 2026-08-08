@@ -39,18 +39,22 @@ Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` er
 1. **Skills por momento**: `impeccable` antes do render de toda peça; `design-taste-frontend`/`frontend-design` em peça tipo landing/apresentação; `dataviz` em qualquer gráfico.
 2. **Gate do brandguide**: checklist da seção 9 de `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md` antes de toda entrega.
 3. **Auto-inspeção**: ler o PNG renderizado (tool Read) e auditar contra o brief antes de mostrar ao Daniel.
-4. **Inspeção de junção é por recorte 1:1, nunca no quadro inteiro.** O Read mostra a
-   peça reduzida: vazamento de 10-30px (tela fora do device, borda sobre bezel,
-   emenda de composição) fica invisível — foi assim que uma peça saiu errada em
-   2026-08-07 e o Daniel pegou. Em toda composição sobre foto (screen-em-device,
-   recorte, máscara), recortar com `render.mjs recortar` cada canto/borda crítica do
-   PNG final, **ampliar 3× com `tratar`** e inspecionar.
+4. **Inspeção de junção é por recorte 1:1 do contorno COMPLETO — 8 zonas por tela
+   (4 cantos + 4 meios de borda), sempre, sem amostragem.** O Read do quadro inteiro
+   não vê vazamento de 10-30px, e validar só algumas zonas falhou três vezes em
+   2026-08-07: o defeito estava sempre na zona não checada, e quem apontou foi o
+   Daniel. Recortar com `render.mjs recortar`, **ampliar 3× com `tratar`**,
+   inspecionar as 8 zonas de CADA tela composta antes de entregar. Checklist, não
+   julgamento de quais zonas "parecem arriscadas".
 5. **Coordenada em foto se mede com instrumento, nunca a olho.** Fronteira de alto
    contraste (tela branca × bezel preto): **varredura programática de pixels** com
    Sharp (`node -e`, raw buffer, limiar de brilho por linha/coluna) — é o método
    mais preciso e o único que pega borda curva de imagem de IA; exemplo real no
    `fonte.html` da peça `2026-08-07-cena-guia-landing`. Fronteira sem contraste
-   confiável: grade renderizada. A olho, mesmo
+   confiável: grade renderizada. **Varrer de dentro da tela para fora, procurando o
+   escuro da moldura** — varrer de fora para dentro procurando "primeiro claro"
+   trava em qualquer área clara vizinha (parede, outra tela atrás do device), erro
+   pago em 2026-08-07. A olho, mesmo
    em recorte 1:1, o erro passa de 20px e muda até o sinal da inclinação (pago duas
    vezes em 2026-08-07, na mesma peça). Método que funciona: HTML de diagnóstico com
    a imagem 1:1 + grade de 16px (maior a cada 80px) por cima — modelo em
