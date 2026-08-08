@@ -60,8 +60,11 @@
       elt.style.transform = 'matrix3d(' + t.join(',') + ')';
     }
     // Cantos da tela do iPhone no quadro 1200×800: TL, TR, BL, BR
+    // Cantos medidos por grade 1:1 sobre a base (diagnostico-grade.html):
+    // vidro em 1200×800 = TL(674,129) TR(887,120) BL(720,594) BR(939,572);
+    // overlay com inset e folga para a ilha no topo.
     transform2d(document.getElementById('tela'),
-      693,146,  884,132,  716,591,  908,568);
+      679,152,  882,144,  724,588,  934,566);
   </script>
 </body>
 </html>

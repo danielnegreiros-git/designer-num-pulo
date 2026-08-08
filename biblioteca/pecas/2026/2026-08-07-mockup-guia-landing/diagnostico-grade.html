@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Diagnóstico — grade de medição</title>
+<style>
+  * { margin: 0; }
+  body { width: 1536px; height: 1024px; position: relative; }
+  img { position: absolute; inset: 0; width: 1536px; height: 1024px; }
+  .grade {
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(to right, rgba(0,255,255,0.55) 0 1px, transparent 1px 16px),
+      repeating-linear-gradient(to bottom, rgba(0,255,255,0.55) 0 1px, transparent 1px 16px);
+  }
+  .grade-maior {
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(to right, rgba(255,0,120,0.85) 0 1px, transparent 1px 80px),
+      repeating-linear-gradient(to bottom, rgba(255,0,120,0.85) 0 1px, transparent 1px 80px);
+  }
+</style>
+</head>
+<body>
+  <img src="base-mao-ia.png">
+  <div class="grade"></div>
+  <div class="grade-maior"></div>
+</body>
+</html>
