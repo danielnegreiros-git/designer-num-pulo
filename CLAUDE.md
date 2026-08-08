@@ -22,7 +22,7 @@ Aprovadas pelo Daniel em 2026-08-07 (spec, seção 4).
    em `<destino>/_index/fotos/` e em nenhum outro lugar. Nenhuma imagem é criada, movida
    ou alterada. Exceção nova exige decisão dele, com o mesmo rastro.
 5. **Credencial fora do git** (`.env` gitignored).
-6. **A skill global `num-pulo-brand-guidelines` só muda com rastro**: changelog datado na skill + registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo rastro. Este worker é o curador dela. **`biblioteca/calibracoes/` também guarda o que ainda não virou decisão**: divergência achada entre a skill e o padrão real entra lá como proposta pendente, com a medição que a sustenta, em vez de ficar só na cabeça de uma sessão. Há uma aberta hoje (carrossel: formato, escala tipográfica, itálico).
+6. **A skill global `num-pulo-brand-guidelines` só muda com rastro**: changelog datado na skill + registro em `biblioteca/calibracoes/`, ou decisão direta do Daniel com o mesmo rastro. Este worker é o curador dela. **`biblioteca/calibracoes/` também guarda o que ainda não virou decisão**: divergência achada entre a skill e o padrão real entra lá como proposta pendente, com a medição que a sustenta, em vez de ficar só na cabeça de uma sessão. Duas aplicadas em 2026-08-08 (carrossel 3:4; thumbnail de YouTube + dourado), nenhuma pendente.
 
 ## Motor e ferramenta
 
@@ -86,22 +86,13 @@ peça desse tipo segue `templates/mockup-tela-em-cena/manifest.md`.
    arriscadas" deixou passar três defeitos seguidos, e o defeito estava sempre na
    zona que ficou de fora.
 
-## Carrossel de Instagram
+## Imagem em peça — vale para TODO formato
 
-**Template: `templates/carrossel-foto-sangrada/`** — aprovado pelo Daniel em 2026-08-08.
-Carrossel novo começa por ele, não do zero. Peça de origem:
-`biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`. Padrão de referência
-dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
-
-- **2160×2880 (3:4)**, não 1:1. Foto sangrada, texto só branco, vinheta no lado do texto.
-- Normalizado a 1080 de largura: margem 120px, coluna 780px, título Instrument Serif 96px
-  (`line-height` 1.02), corpo Poppins 30px (1.44). Anton só na capa.
-- Fonte é **um** HTML com os slides empilhados; render de 1080×(1440·N) e recorte por
-  `render.mjs recortar`. Um HTML por slide multiplica o mesmo CSS por dez.
-- **Entrega em JPG q95.** Foto sangrada não tem área chapada: PNG pesa 6× e o Instagram
-  recomprime na subida.
-
-## Foto do acervo em peça
+> **Escopo:** esta seção não é de carrossel. Vale para carrossel, thumbnail de
+> YouTube, story, mockup, peça de landing e qualquer coisa com foto do acervo.
+> O que é específico de um formato mora na seção do formato e diz isso na cara.
+> As lições nasceram na primeira peça de cada gênero, mas o mecanismo é o mesmo:
+> a foto não sabe em que quadro vai cair.
 
 - **Frame de vídeo sai em C-Log3** (Canon R6). Cru ao lado de foto exportada, a peça fica
   com dois padrões de cor. A conversão é pelo **LUT da curva da câmera**, não por ganho de
@@ -141,39 +132,52 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   então dá para revelar com o preset exato do Daniel. Não implementado — quando precisar,
   esse é o caminho, não `darktable-cli`/`rawtherapee-cli`, que usam formato próprio
   (`.xmp` do darktable, `.pp3`) e **não** leem preset do Lightroom.
-- **Frame 16:9 em slide 3:4 sofre upscale de ~1,33×** e nunca vai bater com foto nativa
-  vertical em detalhe fino. O sharpen compensa em parte; o limite é da fonte. Por isso:
-  **onde existe foto do destino, usa-se foto.** Frame entra quando não há foto da cena —
-  e aí a escolha é o clipe mais **gráfico** (letreiro, silhueta, objeto em fundo escuro),
-  que depende menos de detalhe fino. Os quatro slides reprovados pelo Daniel em
-  2026-08-08 eram os quatro cuja imagem principal era frame; três tinham foto disponível
-  no acervo e ninguém tinha olhado.
+- **O custo do frame de vídeo depende da proporção do formato de destino, e a ordem de
+  fonte se ajusta a isso.** Frame é 16:9:
+  - **Formato vertical** (carrossel 3:4, story 9:16): o frame sofre upscale de ~1,33× ou
+    mais para preencher, e nunca bate com foto nativa em detalhe fino. Aqui frame é a
+    **última opção fotográfica** — e quando entra, a escolha é o clipe mais **gráfico**
+    (letreiro, silhueta, objeto em fundo escuro), que depende menos de detalhe fino. Os
+    quatro slides reprovados pelo Daniel em 2026-08-08 eram os quatro cuja imagem era
+    frame; três tinham foto no acervo e ninguém tinha olhado.
+  - **Formato 16:9** (thumbnail de YouTube): o frame é **fonte nativa**, sem upscale
+    nenhum, e a penalidade acima não existe. O canal usa frame em thumbnail. Aplicar ali
+    a ordem do carrossel seria transportar uma premissa que não vale.
+
+  O que vale em todo formato: **onde existe foto do destino que sirva à cena, usa-se
+  foto** — pelo tratamento já pronto, não pela resolução. A ordem completa está em
+  "Acervo de imagem".
 - **Acervo de um destino pode estar em mais de uma pasta e de mais de uma viagem.**
   Barcelona tinha 63 fotos tratadas em `H:\Destinos\Barcelona 2022\Fotografia` enquanto a
   peça usava frame de vídeo da viagem de 2025. Antes de recorrer a frame, varrer todas as
   pastas do destino.
 - **Onde o texto vai numa foto é medição, não olho:** `render.mjs analisar <imagem>` devolve,
   por faixa, brilho, detalhe, concentração de pele e o **scrim** necessário para o branco
-  bater contraste 4,5. O slide usa esse número em `--scrim`; vinheta chutada falhou em
-  2026-08-08 em dois slides.
+  bater contraste 4,5. O quadro usa esse número; vinheta chutada falhou em 2026-08-08.
+  Vale para qualquer peça com texto sobre foto, em qualquer proporção.
   - Scrim se calcula por brilho **e por detalhe**. Faixa escura na média mas cheia de
     padrão (fachada da Casa Batlló, detalhe 55) mata texto branco do mesmo jeito.
   - O gradiente mantém o scrim **cheio ao longo de todo o bloco de texto** e só decai
     acima dele. Gradiente que começa a cair na base entrega metade do valor medido na
     primeira linha do título.
-  - O reforço de topo, que sustenta o marcador, também é medido (`--scrim-topo`): o
-    padrão .42 cobre céu e parede clara, mas não cobre branco brilhante (letreiro aceso,
-    brilho 218). E **toda vinheta precisa estar no seletor que aplica `position:
-    absolute`** — `.vin-topo` ficou de fora do seletor e passou rodadas sem efeito
-    nenhum, com o marcador lendo por sorte, pelo fundo da foto.
+  - Reforço em qualquer borda que receba elemento secundário também é medido: .42 cobre
+    céu e parede clara, mas não cobre branco brilhante (letreiro aceso, brilho 218). E
+    **toda vinheta precisa estar no seletor que aplica `position: absolute`** — uma ficou
+    de fora e passou rodadas sem efeito nenhum, com o texto lendo por sorte.
   - **Pele é sinal, não veto.** Fruta, tijolo e parede ocre entram na faixa de pele; o que
     denuncia rosto é a faixa concentrar pele acima da média da própria foto (≥1,6×). É
     dica de onde olhar, nunca a decisão.
+  - **Scrim zero é resposta legítima.** Thumbnail do canal não usa vinheta: o texto cai
+    sobre zona já escura da própria foto. Medir serve tanto para dizer quanto escurecer
+    quanto para dizer que não precisa.
 - **Texto sobre rosto é gate, não revisão: `render.mjs checar <fonte.html>`.** Obrigatório
-  antes de toda entrega com pessoa na peça; `montar.ps1` chama e aborta se acusar.
-  - A medição é no **slide renderizado**, não na foto de origem: `object-fit: cover`
-    recorta e o split comprime a foto em meia altura, então bbox medida na imagem não
-    corresponde ao que sai. Erro pago em 2026-08-08, no slide 10.
+  antes de **toda entrega com pessoa na peça**, em qualquer formato — o script de montagem
+  da peça chama e aborta se acusar.
+  - A medição é no **quadro renderizado**, não na foto de origem: `object-fit: cover`
+    recorta, e um split comprime a foto em meia altura, então bbox medida na imagem não
+    corresponde ao que sai. Erro pago em 2026-08-08.
+  - Em thumbnail o gate pesa mais, não menos: rosto grande é a regra do formato, e o
+    texto ocupa metade do quadro.
   - Quem enxerga é `render.mjs rostos`, que chama `claude -p` (assinatura Max, regra 1) —
     o Chromium do Playwright **não** expõe `FaceDetector`, testado com e sem as flags de
     Shape Detection. Detecção fica em cache por **SHA-1 do conteúdo** em `.rostos/`
@@ -189,7 +193,52 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
   em grade com as candidatas e renderizar.
 - Peça com foto do acervo leva um **`preparar-imagens.ps1`** que reconstrói `imagens/` do
   zero: origem exata de cada arquivo, tratamento aplicado e a análise que definiu âncora e
-  scrim. Modelo em `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`.
+  scrim. Vale para qualquer formato — um quadro só também. Modelo em
+  `biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`.
+
+## Formatos — o que é específico de cada um
+
+A seção acima vale para todos. Aqui fica só o que **muda** de formato para
+formato. Formato novo ganha subseção nova aqui, e não regra genérica reescrita.
+
+| Formato | Quadro | Onde está o padrão |
+|---|---|---|
+| Carrossel Instagram | 1080×1440 (3:4), entrega 2160×2880 | `templates/carrossel-foto-sangrada/` + seção abaixo |
+| Thumbnail YouTube | 1280×720 (16:9) | `biblioteca/calibracoes/2026-08-08-thumbnail-youtube-padrao-e-dourado.md` + seção abaixo |
+| Mockup de tela em cena | varia | `templates/mockup-tela-em-cena/` |
+
+### Carrossel de Instagram
+
+**Template: `templates/carrossel-foto-sangrada/`** — aprovado pelo Daniel em 2026-08-08.
+Carrossel novo começa por ele, não do zero. Peça de origem:
+`biblioteca/pecas/2026/2026-08-07-carrossel-madri-ou-barcelona/`. Padrão de referência
+dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
+
+- **2160×2880 (3:4)**, não 1:1. Foto sangrada, texto só branco, vinheta no lado do texto.
+- Normalizado a 1080 de largura: margem 120px, coluna 780px, título Instrument Serif 96px
+  (`line-height` 1.02), corpo Poppins 30px (1.44). Anton só na capa.
+- Fonte é **um** HTML com os slides empilhados; render de 1080×(1440·N) e recorte por
+  `render.mjs recortar`. Um HTML por slide multiplica o mesmo CSS por dez.
+- **Entrega em JPG q95.** Foto sangrada não tem área chapada: PNG pesa 6× e o Instagram
+  recomprime na subida.
+
+### Thumbnail de YouTube
+
+Padrão medido em 2026-08-08 sobre os 3 vídeos mais recentes do canal, por
+bounding box de pixel e histograma — não a olho. Calibração aplicada na skill
+(seções 1, 10.3, 13.3). Piloto: `biblioteca/pecas/2026/2026-08-08-thumbnail-barcelona-piloto/`.
+**Ainda sem template** — nasce na segunda ocorrência ou por decisão do Daniel.
+
+- **1280×720.** Sem logo, sem eyebrow, sem ghost number, sem badge.
+- **Sem vinheta.** O texto cai sobre zona já escura da própria foto; nenhuma das
+  três thumbnails medidas usa scrim. Medir continua obrigatório — para confirmar
+  que não precisa, ou para achar o enquadramento em que não precisa.
+- **Anton branco AllCaps.** Título isolado: cap-height ~54% da altura do quadro.
+  Com subtítulo: título ~22% e subtítulo ~76% do título, mesma fonte e cor.
+- **Dourado `#F1AC22`** é sétima cor do sistema desde 08/08, **pontual**: só tag
+  informativa (duração, roteiro). Subtítulo padrão continua branco.
+- **Frame de vídeo é fonte de primeira aqui**, não última: 16:9 nativo, sem
+  upscale. É o que o canal usa.
 
 ## Dois sistemas visuais — roteamento
 
@@ -272,7 +321,8 @@ Nenhuma imagem do acervo é criada, movida ou alterada.
 - **Mockup é família, não formato único**: `templates/mockup-<tipo>/`. Existe `mockup-tela-em-cena` (aparelho em cena fotográfica, desde 07/08). Tipo novo — impresso, vestuário, tela flutuante sem cena, embalagem — é **template irmão**, nunca variação forçada dentro de um existente. O que os irmãos compartilham (homografia, inset, oclusão) mora em `assets/composicao.js`, não copiado em cada um.
 - **Design system no claude.ai/design**: `design-system/` é a fonte; sync incremental via ferramenta `DesignSync` (projeto registrado em docs/handoff.md). Preview novo leva `<!-- @dsCard group="..." -->` na primeira linha.
 - **Caminho de skill sempre absoluto**: `C:/Users/Danie/.claude/skills/<skill>/SKILL.md`.
-- **Commit em português**, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`, direto na `main`, com push (remoto GitHub). **Sem aspas duplas na mensagem**: dentro de here-string do PowerShell elas quebram o quoting nativo do Windows e o git recebe cada palavra como pathspec. Pior: o `git push` seguinte responde ok mesmo sem commit novo — conferir com `git log --oneline -1`.
+- **Commit em português**, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`, direto na `main`, com push (remoto GitHub).
+- **Mensagem de commit vai por arquivo**, sempre: escrever num `.txt` no scratchpad e `git commit -F <arquivo>`. Here-string do PowerShell quebra o quoting nativo do Windows em qualquer aspa dupla da mensagem, e o git passa a tratar cada palavra como pathspec. Pior: o `git push` seguinte responde ok mesmo sem commit novo, então o erro passa despercebido — se usar here-string, conferir com `git log --oneline -1`. Isso já foi documentado como "evite aspas duplas" e falhou três vezes na mesma sessão; regra que depende de lembrar é regra que falha, então a regra virou o `-F`.
 
 ## Comunicação entre sistemas
 

@@ -7,6 +7,7 @@
   --laranja: #FF5931; /* acento pontual; proibido como fundo */
   --lime:    #E4FE00; /* acento máximo; proibido como fundo; texto só indigo/preto */
   --violeta: #9b40f5; /* tags/labels sobre fundo claro; proibido sobre indigo */
+  --dourado: #F1AC22; /* uso pontual: tag informativa em thumbnail (duração, roteiro) — não é subtítulo padrão */
 }
 
 .font-display   { font-family: 'Anton', sans-serif; text-transform: uppercase; }
