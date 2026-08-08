@@ -34,10 +34,12 @@ thumbnail de YouTube.
 
 ## Situações em aberto
 
-- **Look de cor.** O Daniel vai exportar um HALD revelado com o preset dele. O
-  identity está em `presets-luts/hald-identity-nivel8.png` e os frames de partida
-  (só LUT) em `presets-luts/so-lut-clog3-rec709/`. Enquanto não vem, frame de
-  vídeo casa estatisticamente com as fotos exportadas do destino.
+- **Look de cor, com o Daniel.** Ele vai revelar `presets-luts/hald-identity-nivel8.png`
+  com o preset dele e salvar como `presets-luts/hald-numpulo.png` — passo a passo
+  em `presets-luts/LEIA.md`, escrito para ele. Não deu para fazer em 08/08.
+  **Ao ver esse arquivo aparecer, ligar no pipeline** (`cor --lut`) e passar a
+  usá-lo no lugar do `--referencia` estatístico, que é a aproximação de hoje.
+  Se ele não tiver feito, lembrar sem cobrar: são 5 minutos, uma vez só.
 - **Camera Raw por COM, não implementado.** Photoshop 2024 responde por COM
   (27.9.1) e o ACR lê `.xmp` como sidecar do RAW — única rota fiel ao preset do
   Lightroom. `darktable-cli` e `rawtherapee-cli` não leem preset do Adobe.
