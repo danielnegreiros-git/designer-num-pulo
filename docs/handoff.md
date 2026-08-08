@@ -53,11 +53,6 @@ thumbnail de YouTube, e a primeira calibração da `num-pulo-brand-guidelines`.
   de carrossel e a `num-pulo-brand-guidelines`, com a medição que as sustenta, em
   `biblioteca/calibracoes/2026-08-08-proposta-carrossel-no-brandguide.md`. A skill
   não foi tocada; o arquivo diz o que editar se ele aprovar.
-- **`impeccable` antes do render de toda peça** (regra 1 do sistema de qualidade) não
-  foi cumprida como está escrita: rodou uma vez, no começo do carrossel, e nas quatro
-  rodadas de calibração seguintes o que pegou defeito foi medição (`analisar`,
-  `checar`), não a skill. Ou a regra passa a valer só para peça de formato novo, ou
-  volta a valer sempre — decisão do Daniel, não minha.
 - **Look de cor.** O Daniel vai exportar um HALD revelado com o preset dele; o
   identity está em `presets-luts/hald-identity-nivel8.png` e os frames de partida
   (só LUT aplicado) em `presets-luts/so-lut-clog3-rec709/`. Enquanto não vem, frame

@@ -1,4 +1,4 @@
-# Carrossel de foto sangrada
+﻿# Carrossel de foto sangrada
 
 Carrossel de Instagram com foto do acervo ocupando o quadro inteiro e tipografia
 branca por cima. Formato editorial padrão do canal para conteúdo de destino.
@@ -91,6 +91,10 @@ preenche, porque é ele que registra a origem de cada imagem.
 5. **`montar.ps1 -Escala 2`** para a entrega. Sai `<slug-sem-data>-01.jpg`…
 6. **Auto-inspeção**: ler cada quadro da entrega e auditar contra o brief e o
    checklist da seção 9 do brandguide antes de mostrar ao Daniel.
+
+Este formato já tem template, então **não roda impeccable** (decisão do Daniel,
+2026-08-08): a skill fica para formato novo. O gate do brandguide e a
+auto-inspeção continuam valendo.
 
 Um HTML com todos os slides empilhados, render de 1080×(1440·N), recorte por
 `render.mjs recortar`. Um arquivo por slide multiplicaria o mesmo CSS por dez.

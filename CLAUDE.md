@@ -54,9 +54,9 @@ Toda saída é JSON. Códigos de saída: `0` ok, `2` erro de uso (conserte a cha
 
 ## Sistema de qualidade (obrigação, não sugestão)
 
-1. **Skills por momento**: `impeccable` antes do render de toda peça; `design-taste-frontend`/`frontend-design` em peça tipo landing/apresentação; `dataviz` em qualquer gráfico.
-2. **Gate do brandguide**: checklist da seção 9 de `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md` antes de toda entrega.
-3. **Auto-inspeção**: ler o PNG renderizado (tool Read) e auditar contra o brief antes de mostrar ao Daniel.
+1. **Skills por momento**: `impeccable` **só em formato novo** — peça que ainda não tem template em `templates/`. Formato já aprovado dispensa: a decisão de design já foi tomada e revisada, e em formato conhecido quem pega defeito é medição (`analisar`, `checar`, `contorno`), não a skill (decisão do Daniel, 2026-08-08). `design-taste-frontend`/`frontend-design` em peça tipo landing/apresentação; `dataviz` em qualquer gráfico.
+2. **Gate do brandguide**: checklist da seção 9 de `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md` antes de toda entrega. Este continua valendo sempre, com ou sem template.
+3. **Auto-inspeção**: ler o quadro renderizado (tool Read) e auditar contra o brief antes de mostrar ao Daniel. Também vale sempre.
 
 ### Composição sobre foto (tela em aparelho, recorte, máscara)
 

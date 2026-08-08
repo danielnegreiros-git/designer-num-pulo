@@ -136,6 +136,13 @@ Três camadas, todas obrigatórias:
 
 1. **Skills de execução por momento** (obrigação de invocar, não sugestão):
    - `impeccable` — toda peça HTML antes do render (hierarquia, espaçamento, tipografia).
+
+     > **Revisado em 2026-08-08 pelo Daniel:** só em **formato novo**, isto é,
+     > peça que ainda não tem template. Formato já aprovado (template em
+     > `templates/`) dispensa — a decisão de design já foi tomada e revisada, e
+     > repeti-la a cada peça não pegou defeito nenhum nas quatro rodadas de
+     > calibração do primeiro carrossel. O que pega defeito em formato conhecido
+     > é medição: `analisar`, `checar`, `contorno`.
    - `design-taste-frontend` / `frontend-design` — peça tipo landing/apresentação.
    - `dataviz` — qualquer gráfico ou visualização de dado.
 2. **Gate do brandguide**: checklist da seção 9 da `num-pulo-brand-guidelines`
