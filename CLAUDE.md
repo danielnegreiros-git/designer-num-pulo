@@ -30,54 +30,48 @@ Peça nasce como **HTML estático + CSS** com os tokens de `design-system/tokens
     node tools/render.mjs render <arquivo.html> --out <saida.png> [--largura 1080] [--altura 1080] [--escala 1] [--pagina-inteira]
     node tools/render.mjs tratar <entrada> --out <saida> [--largura N] [--altura N] [--qualidade 80]
     node tools/render.mjs recortar <entrada> --out <saida> --x N --y N --largura N --altura N
+    node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--alcance 80] [--limiar 100] [--mapa "escala,dx,dy"]
+                                              [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]
+    node tools/render.mjs contorno <imagem> --quad "x,y x,y x,y x,y" --out <pasta> [--escala 1] [--zona 200]
     node tools/render.mjs info <arquivo>
 
-Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` erro de uso (conserte a chamada), `1` falha de execução. Formato de `tratar` sai da extensão de `--out` (png/jpg/webp).
+Toda saída é JSON. Códigos de saída: `0` ok, `2` erro de uso (conserte a chamada), `1` falha de execução. Formato de `tratar` sai da extensão de `--out` (png/jpg/webp).
+
+**A máquina de composição mora em [assets/composicao.js](assets/composicao.js)** (`NP.tela`, `NP.poligono`, `NP.homografia`), carregada por `<script src>`. Peça **nunca** copia essa máquina para dentro de si: correção lá tem que valer para todas. É o mesmo princípio das skills globais — cópia local é fork silencioso.
 
 ## Sistema de qualidade (obrigação, não sugestão)
 
 1. **Skills por momento**: `impeccable` antes do render de toda peça; `design-taste-frontend`/`frontend-design` em peça tipo landing/apresentação; `dataviz` em qualquer gráfico.
 2. **Gate do brandguide**: checklist da seção 9 de `C:/Users/Danie/.claude/skills/num-pulo-brand-guidelines/SKILL.md` antes de toda entrega.
 3. **Auto-inspeção**: ler o PNG renderizado (tool Read) e auditar contra o brief antes de mostrar ao Daniel.
-4. **Inspeção de junção é por recorte 1:1 do contorno COMPLETO — 8 zonas por tela
-   (4 cantos + 4 meios de borda), sempre, sem amostragem.** O Read do quadro inteiro
-   não vê vazamento de 10-30px, e validar só algumas zonas falhou três vezes em
-   2026-08-07: o defeito estava sempre na zona não checada, e quem apontou foi o
-   Daniel. Recortar com `render.mjs recortar`, **ampliar 3× com `tratar`**,
-   inspecionar as 8 zonas de CADA tela composta antes de entregar. Checklist, não
-   julgamento de quais zonas "parecem arriscadas".
-5. **Coordenada em foto se mede com instrumento, nunca a olho.** Fronteira de alto
-   contraste (tela branca × bezel preto): **varredura programática de pixels** com
-   Sharp (`node -e`, raw buffer, limiar de brilho por linha/coluna) — é o método
-   mais preciso e o único que pega borda curva de imagem de IA; exemplo real no
-   `fonte.html` da peça `2026-08-07-cena-guia-landing`. Fronteira sem contraste
-   confiável: grade renderizada. **Varrer de dentro da tela para fora, procurando o
-   escuro da moldura** — varrer de fora para dentro procurando "primeiro claro"
-   trava em qualquer área clara vizinha (parede, outra tela atrás do device), erro
-   pago em 2026-08-07. A olho, mesmo
-   em recorte 1:1, o erro passa de 20px e muda até o sinal da inclinação (pago duas
-   vezes em 2026-08-07, na mesma peça). Método que funciona: HTML de diagnóstico com
-   a imagem 1:1 + grade de 16px (maior a cada 80px) por cima — modelo em
-   `biblioteca/pecas/2026/2026-08-07-mockup-guia-landing/diagnostico-grade.html` —,
-   recortes ampliados 3×, contagem de células. Para homografia (tela em device):
-   medir as 4 bordas em 2 alturas cada, checar consistência das inclinações
-   (largura deve crescer na direção mais próxima da câmera) e validar o resultado
-   com recorte 3× das duas laterais em duas alturas — borda do conteúdo paralela ao
-   bezel, folga constante.
-6. **Composição com `transform: matrix3d` sai serrilhada: renderizar com
-   supersampling.** O Chromium não antialiasa a aresta de um layer 3D — a borda do
-   overlay vira degraus visíveis. Pipeline obrigatório em peça com homografia:
-   `render --escala 4` para o scratchpad e `tratar --largura <final>` (Lanczos do
-   Sharp) para a saída. Reforço: **inset de ~1,5px** nos cantos do quad joga a
-   aresta sem AA para dentro da tela (creme sobre creme) em vez de sobre a moldura
-   preta. Erro pago em 2026-08-07.
-7. **Clip de oclusão recorta só a região do objeto que ocupa a frente.** Um clip
-   vertical de altura inteira para esconder o canto atrás de um celular cortou
-   conteúdo lá em cima (o "Buscar" do notebook). O polígono desce até o topo do
-   objeto oclusor e só ali entalha. Erro pago em 2026-08-07.
-8. **Raio do conteúdo = raio do vidro.** Overlay com `border-radius` menor que o do
-   device deixa o canto do conteúdo aparecer sobre a moldura. Medir a curva no
-   recorte 3× do canto e igualar.
+
+### Composição sobre foto (tela em aparelho, recorte, máscara)
+
+Cinco rodadas de retrabalho em 2026-08-07 na primeira peça do gênero, todas
+pegas pelo Daniel e nenhuma por mim. As lições viraram **ferramenta e
+biblioteca** — cumprir é rodar os comandos, não lembrar das regras. Quem faz
+peça desse tipo segue `templates/mockup-tela-em-cena/manifest.md`.
+
+4. **Coordenada em foto se mede com `render.mjs medir-tela`, nunca a olho.** A
+   olho o erro passa de 20px e chega a inverter o sinal da inclinação. O
+   subcomando varre pixels **de dentro da tela para fora** (de fora para dentro
+   trava em qualquer área clara vizinha) e descarta amostra puxada para dentro
+   por artefato escuro (ilha da câmera). Borda tapada por outro objeto: restringir
+   o trecho com `--esq/--dir/--topo/--fundo`, senão a varredura acha a moldura do
+   objeto da frente. Sem contraste confiável para varrer, o fallback é grade
+   renderizada 1:1 (modelo: `diagnostico-grade.html` na peça
+   `2026-08-07-cena-guia-landing`).
+5. **Compor com `NP.tela()` da [assets/composicao.js](assets/composicao.js)**, que
+   já embute o inset anti-serrilhado e cobra o raio do vidro. Oclusão entre
+   objetos: `NP.poligono()` — o entalhe começa **no topo do objeto que oclui**;
+   clip de altura cheia come conteúdo longe da junção.
+6. **Render com supersampling**: `render --escala 4` no scratchpad, `tratar
+   --largura <final>` para a saída. `matrix3d` não recebe antialiasing do
+   Chromium; sem isso a aresta sai em degraus.
+7. **Validar as 8 zonas do contorno de CADA tela com `render.mjs contorno`** antes
+   de entregar. É checklist, não amostragem: validar só as zonas que "parecem
+   arriscadas" deixou passar três defeitos seguidos, e o defeito estava sempre na
+   zona que ficou de fora.
 
 ## Dois sistemas visuais — roteamento
 
@@ -94,7 +88,8 @@ Nunca misturar os dois na mesma peça.
 
 - **Slug**: `YYYY-MM-DD-<formato>-<tema>`, minúsculas com hífen. Data = produção da peça.
 - **Uma pasta por peça** em `biblioteca/pecas/<ano>/<slug>/`: `brief.md` (pedido, demandante, fontes de foto, `status: rascunho|aprovada|descartada`), fonte HTML/dados, `saida/*.png`.
-- **Template nasce da segunda ocorrência** de um formato, nunca de antecipação. `templates/<formato>/`: `template.html` + `manifest.md` (campos variáveis, dimensões, exemplo, peça de origem).
+- **Template nasce da segunda ocorrência** de um formato, nunca de antecipação. `templates/<formato>/`: `template.html` + `manifest.md` (slots, procedimento com os comandos, peça de origem, armadilhas que ele resolve).
+- **Mockup é família, não formato único**: `templates/mockup-<tipo>/`. Existe `mockup-tela-em-cena` (aparelho em cena fotográfica, desde 07/08). Tipo novo — impresso, vestuário, tela flutuante sem cena, embalagem — é **template irmão**, nunca variação forçada dentro de um existente. O que os irmãos compartilham (homografia, inset, oclusão) mora em `assets/composicao.js`, não copiado em cada um.
 - **Design system no claude.ai/design**: `design-system/` é a fonte; sync incremental via ferramenta `DesignSync` (projeto registrado em docs/handoff.md). Preview novo leva `<!-- @dsCard group="..." -->` na primeira linha.
 - **Caminho de skill sempre absoluto**: `C:/Users/Danie/.claude/skills/<skill>/SKILL.md`.
 - **Commit em português**, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`, direto na `main`, com push (remoto GitHub).

@@ -20,11 +20,12 @@
     mask-composite: intersect;
   }
   .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: #F6F2EA; }
-  #tela-nb { width: 1363px; height: 832px; border-radius: 26px; }
+  #tela-nb { width: 1363px; height: 832px; }
   #tela-nb img { display: block; width: 1363px; }
-  #tela-ph { width: 137px; height: 284px; border-radius: 14px; }
+  #tela-ph { width: 137px; height: 284px; }
   #tela-ph img { display: block; width: 145px; margin: -29px 0 0 -4px; }
-  /* Ilha da câmera repintada da base por cima do conteúdo (hardware flutua sobre o app) */
+  /* Ilha da câmera repintada da base por cima do conteúdo: no aparelho real o
+     hardware flutua sobre o app, o app não começa abaixo dele. */
   #ilha {
     position: absolute; left: 967px; top: 358px; width: 81px; height: 26px;
     background-image: url('cena-base-ia.png');
@@ -38,68 +39,29 @@
   <div class="tela" id="tela-nb"><img src="tela-roteiro-desktop.png" alt=""></div>
   <div class="tela" id="tela-ph"><img src="tela-patacho.jpg" alt=""></div>
   <div id="ilha"></div>
+  <script src="../../../../assets/composicao.js"></script>
   <script>
-    function adj(m) {
-      return [
-        m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
-        m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
-        m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]
-      ];
-    }
-    function multmm(a, b) {
-      const c = [];
-      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
-        let s = 0;
-        for (let k = 0; k < 3; k++) s += a[3*i+k]*b[3*k+j];
-        c[3*i+j] = s;
-      }
-      return c;
-    }
-    function multmv(m, v) {
-      return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]];
-    }
-    function basisToPoints(x1,y1,x2,y2,x3,y3,x4,y4) {
-      const m = [x1,x2,x3, y1,y2,y3, 1,1,1];
-      const v = multmv(adj(m), [x4,y4,1]);
-      return multmm(m, [v[0],0,0, 0,v[1],0, 0,0,v[2]]);
-    }
-    // H: local (0,0)-(w,h) -> quadrilátero destino. Devolve a 3x3 normalizada.
-    function homografia(w, h, d) {
-      const s = basisToPoints(0,0, w,0, 0,h, w,h);
-      const t = multmm(basisToPoints(...d), adj(s));
-      for (let i = 0; i < 9; i++) t[i] /= t[8];
-      return t;
-    }
-    function aplicar(elt, t) {
-      const m = [t[0],t[3],0,t[6], t[1],t[4],0,t[7], 0,0,1,0, t[2],t[5],0,t[8]];
-      elt.style.transformOrigin = '0 0';
-      elt.style.transform = 'matrix3d(' + m.join(',') + ')';
-    }
-    function paraLocal(t, x, y) {
-      const inv = adj(t);
-      const v = multmv(inv, [x, y, 1]);
-      return [v[0]/v[2], v[1]/v[2]];
-    }
+    /* Quads medidos por `render.mjs medir-tela` sobre cena-base-ia.png, já em
+     * coordenadas do quadro (--mapa "0.828125,-36,-24"):
+     *
+     *   medir-tela cena-base-ia.png --regiao "560,325,1180,700" --dir "325,455" --mapa ...
+     *   medir-tela cena-base-ia.png --regiao "1180,470,1320,780" --mapa ...
+     *
+     * O --dir do notebook restringe a borda direita ao trecho que o celular não
+     * oclui; sem isso a varredura acha a moldura do celular e erra 6px. */
+    const NOTEBOOK = [430.5, 235, 950.7, 237.5, 410.2, 556.4, 931.7, 582.4]
+    const CELULAR = [940.7, 364.2, 1065.1, 367.1, 931.5, 624.3, 1055.8, 630.4]
 
-    // Notebook: cantos por varredura de pixels da base (bordas do branco da tela),
-    // com 2px de transbordo para encostar no bezel. TL, TR, BL, BR em 1200×800.
-    const nb = document.getElementById('tela-nb');
-    const tNb = homografia(1363, 832, [429,236, 950,238, 410,556, 933,581]);
-    // Oclusão do celular: entalhe SÓ na região do celular (abaixo do topo dele,
-    // canvas y>356, à direita da linha 925,356 → 898,930). Acima do celular o
-    // conteúdo segue inteiro — um clip vertical até o topo cortava o "Buscar".
-    const pl = (x, y) => paraLocal(tNb, x, y).map((v) => v.toFixed(1) + 'px').join(' ');
-    nb.style.clipPath = 'polygon(-40px -40px, 1420px -40px, '
-      + pl(1300, 356) + ', ' + pl(925, 356) + ', ' + pl(898, 930) + ', ' + pl(-80, 930) + ', -40px 900px)';
-    aplicar(nb, tNb);
+    const nb = document.getElementById('tela-nb')
+    const tNb = NP.tela(nb, NOTEBOOK, { raio: 26 })
+    /* Entalhe do celular: recorta só onde ele passa na frente (a partir do topo
+     * dele, y=356 do quadro, à direita da sua borda esquerda). O resto da tela
+     * segue inteiro — corte de altura cheia comia o "Buscar" lá em cima. */
+    NP.poligono(nb, tNb, [
+      [300, 150], [1300, 150], [1300, 356], [925, 356], [898, 930], [300, 930],
+    ])
 
-    // Celular: conteúdo cobre o vidro inteiro (como app real); a ilha é repintada
-    // por cima pelo #ilha. Bordas todas varridas de dentro para fora.
-    // Inset de 1.5px: a aresta do layer 3D não recebe antialiasing do Chromium;
-    // dentro do vidro ela cai creme-sobre-creme (invisível) em vez de sobre a
-    // moldura preta (degraus visíveis).
-    aplicar(document.getElementById('tela-ph'),
-      homografia(137, 284, [942.5,366.5, 1063.5,369.5, 933.5,620.5, 1053.5,627.5]));
+    NP.tela(document.getElementById('tela-ph'), CELULAR, { raio: 14 })
   </script>
 </body>
 </html>

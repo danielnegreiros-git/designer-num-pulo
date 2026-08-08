@@ -1,0 +1,23 @@
+- generic [active] [ref=f2e1]:
+  - main [ref=f2e2]:
+    - img "Pôr do sol em Fernando de Noronha" [ref=f2e4]
+    - generic [ref=f2e5]:
+      - img "Guia Num Pulo" [ref=f2e6]
+      - heading "Em breve" [level=1] [ref=f2e7]
+      - paragraph [ref=f2e8]: A gente tá construindo os guias de viagem do Brasil que a gente sempre quis. Entre na lista pra ser dos primeiros a saber quando abrir.
+      - link "Entrar na lista" [ref=f2e9] [cursor=pointer]:
+        - /url: /conheca
+        - text: Entrar na lista
+        - generic [ref=f2e10]: →
+  - region "Consentimento de análise de uso" [ref=f2e11]:
+    - generic [ref=f2e12]:
+      - paragraph [ref=f2e13]:
+        - text: Quanto mais a gente entende como você usa o Guia, melhor ele fica para planejar sua viagem. Topa ativar os cookies de análise? Se preferir não, seguimos medindo de forma anônima.
+        - link "Política de privacidade" [ref=f2e14] [cursor=pointer]:
+          - /url: /privacidade
+        - text: .
+      - generic [ref=f2e15]:
+        - button "Agora não" [ref=f2e16]
+        - button "Aceitar" [ref=f2e17]
+  - region "Notifications alt+T"
+  - alert [ref=f2e18]

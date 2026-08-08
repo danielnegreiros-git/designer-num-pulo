@@ -3,7 +3,7 @@
 - slug: 2026-08-07-mockup-guia-landing
 - formato: mockup-produto (primeira ocorrência — sem template ainda)
 - demandante: Daniel (pedido direto, teste do fluxo da fase 1)
-- status: rascunho
+- status: aprovada (2026-08-07, Daniel) — teste do fluxo, sem uso agendado
 
 ## Pedido
 

@@ -3,7 +3,9 @@
 - slug: 2026-08-07-cena-guia-landing
 - formato: mockup-produto (2ª ocorrência do formato — candidata a promover template)
 - demandante: Daniel (pedido direto)
-- status: rascunho
+- status: aprovada (2026-08-07, Daniel) — **teste**, não vai para a /lista agora:
+  o Daniel vai planejar as demais imagens e fazer a troca de uma vez. Nenhuma
+  demanda aberta para o worker `guia`.
 
 ## Pedido
 

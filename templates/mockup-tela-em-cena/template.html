@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>[TÍTULO DA PEÇA]</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+
+  /* Dimensão de trabalho. A saída sai em 2× ou mais via supersampling — ver o
+     manifest. [FUNDO] = cor onde a peça vai viver (dissolve) ou #FFF. */
+  body {
+    width: 1200px; height: 800px; overflow: hidden;
+    background: [FUNDO]; position: relative;
+  }
+
+  /* A base entra maior que o quadro quando a imagem de IA vem com moldura
+     pintada: ampliar joga a moldura para fora. As máscaras dissolvem as bordas
+     no fundo — use só nos lados que devem sumir (regra: laterais nunca cortam,
+     altura pode). Peça sem dissolve: apague o bloco de máscara. */
+  img.base {
+    position: absolute; left: [BASE_X]px; top: [BASE_Y]px;
+    width: [BASE_W]px; height: [BASE_H]px;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0, #000 [FADE]px, #000 calc(100% - [FADE]px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 [FADE]px, #000 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent 0, #000 [FADE]px, #000 calc(100% - [FADE]px), transparent 100%),
+      linear-gradient(to bottom, transparent 0, #000 [FADE]px, #000 100%);
+    mask-composite: intersect;
+  }
+
+  /* Cada tela: o tamanho local é a resolução em que o screenshot fica nítido;
+     a homografia projeta no vidro. `background` cobre o vão de 1px do inset. */
+  .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: [COR_TELA]; }
+  #tela-a { width: [TELA_A_W]px; height: [TELA_A_H]px; }
+  #tela-a img { display: block; width: [TELA_A_W]px; }
+
+  /* Ilha da câmera / notch: repintada da base POR CIMA do conteúdo, porque no
+     aparelho real o hardware flutua sobre o app. Medir a caixa com
+     `render.mjs recortar` e casar background-position com o desenho da base.
+     Aparelho sem ilha: apague este bloco. */
+  #ilha {
+    position: absolute; left: [ILHA_X]px; top: [ILHA_Y]px;
+    width: [ILHA_W]px; height: [ILHA_H]px;
+    background-image: url('[BASE]');
+    background-size: [BASE_W]px [BASE_H]px;
+    background-position: -[ILHA_BX]px -[ILHA_BY]px;
+  }
+</style>
+</head>
+<body>
+  <img class="base" src="[BASE]" alt="">
+  <div class="tela" id="tela-a"><img src="[SCREENSHOT_A]" alt=""></div>
+  <div id="ilha"></div>
+
+  <!-- Caminho relativo a partir de biblioteca/pecas/<ano>/<slug>/. Nunca copiar
+       a máquina para dentro da peça: correção na lib tem que valer para todas. -->
+  <script src="../../../../assets/composicao.js"></script>
+  <script>
+    /* Quads em coordenadas do QUADRO, medidos com:
+     *   node tools/render.mjs medir-tela [BASE] --regiao "x0,y0,x1,y1" \
+     *        --mapa "[ESCALA_BASE],[BASE_X],[BASE_Y]"
+     * Borda ocluída por outro objeto: restrinja o trecho com --esq/--dir/--topo/--fundo,
+     * senão a varredura acha a moldura do objeto da frente e erra alguns px. */
+    const TELA_A = [/* TL */ 0,0, /* TR */ 0,0, /* BL */ 0,0, /* BR */ 0,0]
+
+    /* `raio` = raio do vidro do aparelho (menor que ele deixa o canto do
+     * conteúdo aparecer sobre a moldura). O inset anti-serrilhado é automático. */
+    const tA = NP.tela(document.getElementById('tela-a'), TELA_A, { raio: [RAIO_A] })
+
+    /* Oclusão (só quando outro objeto passa na frente desta tela): o polígono
+     * mantém tudo e entalha a partir do topo do objeto que oclui. Pontos em
+     * coordenadas do quadro, em ordem. Sem oclusão: apague.
+     * NP.poligono(elemento, tA, [[fora,fora], [fora,fora], [x,yTopoDoObjeto], ...]) */
+  </script>
+</body>
+</html>
