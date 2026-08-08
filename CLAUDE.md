@@ -44,8 +44,17 @@ Saída de `info` é JSON (metadata do Sharp). Códigos de saída: `0` ok, `2` er
    emenda de composição) fica invisível — foi assim que uma peça saiu errada em
    2026-08-07 e o Daniel pegou. Em toda composição sobre foto (screen-em-device,
    recorte, máscara), recortar com `render.mjs recortar` cada canto/borda crítica do
-   PNG final e inspecionar os recortes. Medição de cantos na imagem base também é
-   por recorte 1:1; estimativa a olho no quadro inteiro erra por dezenas de pixels.
+   PNG final, **ampliar 3× com `tratar`** e inspecionar.
+5. **Coordenada em foto se mede com grade renderizada, nunca a olho.** A olho, mesmo
+   em recorte 1:1, o erro passa de 20px e muda até o sinal da inclinação (pago duas
+   vezes em 2026-08-07, na mesma peça). Método que funciona: HTML de diagnóstico com
+   a imagem 1:1 + grade de 16px (maior a cada 80px) por cima — modelo em
+   `biblioteca/pecas/2026/2026-08-07-mockup-guia-landing/diagnostico-grade.html` —,
+   recortes ampliados 3×, contagem de células. Para homografia (tela em device):
+   medir as 4 bordas em 2 alturas cada, checar consistência das inclinações
+   (largura deve crescer na direção mais próxima da câmera) e validar o resultado
+   com recorte 3× das duas laterais em duas alturas — borda do conteúdo paralela ao
+   bezel, folga constante.
 
 ## Dois sistemas visuais — roteamento
 
