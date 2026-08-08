@@ -63,11 +63,34 @@ Cor de texto: **branco puro, sempre**. Nenhuma cor de marca toca fotografia
    sofre upscale de ~1,33× no 3:4 e denuncia ao lado de foto exportada. Frame só
    quando não há foto da cena, e aí escolhe-se o clipe mais gráfico.
 
-## Montagem
+## Procedimento
 
-Copiar `montar.ps1` e `preparar-imagens.ps1` da peça de origem e ajustar. O
-fluxo é: `preparar-imagens.ps1` (acervo → `imagens/` + análise) → editar
-`fonte.html` com os scrims medidos → `montar.ps1 -Escala 2`.
+Os três arquivos deste template vão para a pasta da peça. **`montar.ps1` copia
+sem editar** — ele conta os slides no próprio `fonte.html` e deriva a altura da
+tira; peça de 8 e de 12 usam o mesmo arquivo. Só `preparar-imagens.ps1` se
+preenche, porque é ele que registra a origem de cada imagem.
+
+    biblioteca/pecas/<ano>/<slug>/
+      brief.md               pedido, demandante, fontes, status
+      preparar-imagens.ps1   acervo -> imagens/  (preencher)
+      fonte.html             do template.html, slides empilhados
+      imagens/               gerado
+      saida/                 entrega
+
+1. **`brief.md`** com pedido, demanda de origem e `status: rascunho`.
+2. **`preparar-imagens.ps1`**: apontar `$destino`, preencher os três blocos
+   (fotos prontas, brutos, frames) na ordem de fonte do CLAUDE.md e rodar. Ele
+   indexa o destino se ainda não houver índice de fotos, trata cada imagem pelo
+   perfil certo e imprime **âncora e scrim** de cada arquivo.
+3. **`fonte.html`**: copiar `template.html`, empilhar os slides, preencher os
+   slots. `--scrim` e a escolha entre `.bloco baixo` / `.bloco cima` saem da
+   análise do passo 2 — nunca do olho.
+4. **`montar.ps1 -Escala 1 -Preview`** enquanto itera; ler os `_preview-*.jpg`
+   e corrigir. O gate de rosto roda aqui e **aborta** se o texto cair sobre
+   alguém.
+5. **`montar.ps1 -Escala 2`** para a entrega. Sai `<slug-sem-data>-01.jpg`…
+6. **Auto-inspeção**: ler cada quadro da entrega e auditar contra o brief e o
+   checklist da seção 9 do brandguide antes de mostrar ao Daniel.
 
 Um HTML com todos os slides empilhados, render de 1080×(1440·N), recorte por
 `render.mjs recortar`. Um arquivo por slide multiplicaria o mesmo CSS por dez.
