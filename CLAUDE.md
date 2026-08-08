@@ -154,7 +154,7 @@ Nunca misturar os dois na mesma peça.
 - **Mockup é família, não formato único**: `templates/mockup-<tipo>/`. Existe `mockup-tela-em-cena` (aparelho em cena fotográfica, desde 07/08). Tipo novo — impresso, vestuário, tela flutuante sem cena, embalagem — é **template irmão**, nunca variação forçada dentro de um existente. O que os irmãos compartilham (homografia, inset, oclusão) mora em `assets/composicao.js`, não copiado em cada um.
 - **Design system no claude.ai/design**: `design-system/` é a fonte; sync incremental via ferramenta `DesignSync` (projeto registrado em docs/handoff.md). Preview novo leva `<!-- @dsCard group="..." -->` na primeira linha.
 - **Caminho de skill sempre absoluto**: `C:/Users/Danie/.claude/skills/<skill>/SKILL.md`.
-- **Commit em português**, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`, direto na `main`, com push (remoto GitHub).
+- **Commit em português**, trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`, direto na `main`, com push (remoto GitHub). **Sem aspas duplas na mensagem**: dentro de here-string do PowerShell elas quebram o quoting nativo do Windows e o git recebe cada palavra como pathspec. Pior: o `git push` seguinte responde ok mesmo sem commit novo — conferir com `git log --oneline -1`.
 
 ## Comunicação entre sistemas
 
