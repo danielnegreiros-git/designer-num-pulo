@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Cena Guia — notebook + celular na landing</title>
+<style>
+  * { margin: 0; box-sizing: border-box; }
+  body { width: 1200px; height: 800px; overflow: hidden; background: #F4EEE0; position: relative; }
+  /* Base 6% ampliada para jogar a moldura pintada da IA para fora do quadro;
+     laterais e topo esfumados no creme da landing (--bg #F4EEE0). */
+  img.base {
+    position: absolute; left: -36px; top: -24px; width: 1272px; height: 848px;
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 36px, #000 176px, #000 1096px, transparent 1236px),
+      linear-gradient(to bottom, transparent 24px, #000 120px, #000 848px);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent 36px, #000 176px, #000 1096px, transparent 1236px),
+      linear-gradient(to bottom, transparent 24px, #000 120px, #000 848px);
+    mask-composite: intersect;
+  }
+  .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: #F6F2EA; }
+  #tela-nb { width: 1363px; height: 832px; border-radius: 8px; }
+  #tela-nb img { display: block; width: 1363px; }
+  #tela-ph { width: 137px; height: 290px; border-radius: 9px; }
+  #tela-ph img { display: block; width: 148px; margin: -30px 0 0 -5px; }
+</style>
+</head>
+<body>
+  <img class="base" src="cena-base-ia.png" alt="">
+  <div class="tela" id="tela-nb"><img src="tela-roteiro-desktop.png" alt=""></div>
+  <div class="tela" id="tela-ph"><img src="tela-patacho.jpg" alt=""></div>
+  <script>
+    function adj(m) {
+      return [
+        m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+        m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+        m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3]
+      ];
+    }
+    function multmm(a, b) {
+      const c = [];
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) {
+        let s = 0;
+        for (let k = 0; k < 3; k++) s += a[3*i+k]*b[3*k+j];
+        c[3*i+j] = s;
+      }
+      return c;
+    }
+    function multmv(m, v) {
+      return [m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2]];
+    }
+    function basisToPoints(x1,y1,x2,y2,x3,y3,x4,y4) {
+      const m = [x1,x2,x3, y1,y2,y3, 1,1,1];
+      const v = multmv(adj(m), [x4,y4,1]);
+      return multmm(m, [v[0],0,0, 0,v[1],0, 0,0,v[2]]);
+    }
+    // H: local (0,0)-(w,h) -> quadrilátero destino. Devolve a 3x3 normalizada.
+    function homografia(w, h, d) {
+      const s = basisToPoints(0,0, w,0, 0,h, w,h);
+      const t = multmm(basisToPoints(...d), adj(s));
+      for (let i = 0; i < 9; i++) t[i] /= t[8];
+      return t;
+    }
+    function aplicar(elt, t) {
+      const m = [t[0],t[3],0,t[6], t[1],t[4],0,t[7], 0,0,1,0, t[2],t[5],0,t[8]];
+      elt.style.transformOrigin = '0 0';
+      elt.style.transform = 'matrix3d(' + m.join(',') + ')';
+    }
+    function paraLocal(t, x, y) {
+      const inv = adj(t);
+      const v = multmv(inv, [x, y, 1]);
+      return [v[0]/v[2], v[1]/v[2]];
+    }
+
+    // Notebook: cantos do vidro medidos por grade 1:1 (TL, TR, BL, BR em 1200×800).
+    const nb = document.getElementById('tela-nb');
+    const tNb = homografia(1363, 832, [426,240, 949,239, 409,555, 918,577]);
+    // Oclusão do celular: conteúdo do notebook clipado à esquerda da linha
+    // (939,354)-(917,702) do quadro — o celular da base fica por cima.
+    const A = paraLocal(tNb, 939, 354), B = paraLocal(tNb, 917, 702);
+    const dx = (B[0]-A[0]) / (B[1]-A[1]);
+    const yTop = -20, yBot = 852;
+    const xTop = A[0] + dx*(yTop-A[1]), xBot = A[0] + dx*(yBot-A[1]);
+    nb.style.clipPath = 'polygon(-20px ' + yTop + 'px, ' + xTop + 'px ' + yTop + 'px, '
+      + xBot + 'px ' + yBot + 'px, -20px ' + yBot + 'px)';
+    aplicar(nb, tNb);
+
+    // Celular: idem, por cima de tudo.
+    aplicar(document.getElementById('tela-ph'),
+      homografia(137, 290, [950,375, 1059,379, 935,617, 1053,609]));
+  </script>
+</body>
+</html>
