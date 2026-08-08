@@ -11,19 +11,19 @@
   img.base {
     position: absolute; left: -36px; top: -24px; width: 1272px; height: 848px;
     -webkit-mask-image:
-      linear-gradient(to right, transparent 36px, #000 176px, #000 1096px, transparent 1236px),
+      linear-gradient(to right, transparent 36px, #000 176px, #000 1116px, transparent 1236px),
       linear-gradient(to bottom, transparent 24px, #000 120px, #000 848px);
     -webkit-mask-composite: source-in;
     mask-image:
-      linear-gradient(to right, transparent 36px, #000 176px, #000 1096px, transparent 1236px),
+      linear-gradient(to right, transparent 36px, #000 176px, #000 1116px, transparent 1236px),
       linear-gradient(to bottom, transparent 24px, #000 120px, #000 848px);
     mask-composite: intersect;
   }
   .tela { position: absolute; left: 0; top: 0; overflow: hidden; background: #F6F2EA; }
   #tela-nb { width: 1363px; height: 832px; border-radius: 8px; }
   #tela-nb img { display: block; width: 1363px; }
-  #tela-ph { width: 137px; height: 290px; border-radius: 9px; }
-  #tela-ph img { display: block; width: 148px; margin: -30px 0 0 -5px; }
+  #tela-ph { width: 137px; height: 247px; border-radius: 9px; }
+  #tela-ph img { display: block; width: 137px; margin: -28px 0 0 0; }
 </style>
 </head>
 <body>
@@ -73,12 +73,13 @@
       return [v[0]/v[2], v[1]/v[2]];
     }
 
-    // Notebook: cantos do vidro medidos por grade 1:1 (TL, TR, BL, BR em 1200×800).
+    // Notebook: cantos por varredura de pixels da base (bordas do branco da tela),
+    // com 2px de transbordo para encostar no bezel. TL, TR, BL, BR em 1200×800.
     const nb = document.getElementById('tela-nb');
-    const tNb = homografia(1363, 832, [426,240, 949,239, 409,555, 918,577]);
+    const tNb = homografia(1363, 832, [429,235, 951,237, 410,557, 934,582]);
     // Oclusão do celular: conteúdo do notebook clipado à esquerda da linha
-    // (939,354)-(917,702) do quadro — o celular da base fica por cima.
-    const A = paraLocal(tNb, 939, 354), B = paraLocal(tNb, 917, 702);
+    // (925,358)-(908,706) do quadro — o celular da base fica por cima.
+    const A = paraLocal(tNb, 925, 358), B = paraLocal(tNb, 908, 706);
     const dx = (B[0]-A[0]) / (B[1]-A[1]);
     const yTop = -20, yBot = 852;
     const xTop = A[0] + dx*(yTop-A[1]), xBot = A[0] + dx*(yBot-A[1]);
@@ -86,9 +87,10 @@
       + xBot + 'px ' + yBot + 'px, -20px ' + yBot + 'px)';
     aplicar(nb, tNb);
 
-    // Celular: idem, por cima de tudo.
+    // Celular: bordas paralelas (fone quase frontal, varredura de pixels);
+    // conteúdo começa abaixo da ilha da câmera (base creme aparece em volta dela).
     aplicar(document.getElementById('tela-ph'),
-      homografia(137, 290, [950,375, 1059,379, 935,617, 1053,609]));
+      homografia(137, 247, [933,385, 1064,387, 925,622, 1055,630]));
   </script>
 </body>
 </html>
