@@ -314,10 +314,13 @@
 <!-- 10 — CTA -->
 <section class="slide" style="--scrim: .69">
   <img class="foto" src="imagens/s10-casal.jpg" style="object-position: 50% 42%">
-  <div class="vin-baixo"></div>
-  <div class="vin-topo"></div>
+  <!-- Bloco no topo: `render.mjs checar` acusou os dois rostos em y 0,52–0,70,
+       e o bloco no rodapé caía em cima deles. Acima de 0,52 sobram 619px, que é
+       o que o bloco precisa. De quebra, rosto no terço inferior e texto no
+       superior compõe melhor que o contrário. -->
+  <div class="vin-cima"></div>
   <div class="marcador">Madri × Barcelona</div>
-  <div class="bloco baixo" style="bottom: 168px">
+  <div class="bloco cima" style="top: 130px">
     <h2 style="font-size: 88px">E você, <em>time Madri ou time Barcelona?</em></h2>
     <ul class="opcoes">
       <li><span class="seta">→</span> <span>Time Madri <span class="emoji">🍷</span></span></li>

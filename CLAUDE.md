@@ -33,6 +33,8 @@ Peça nasce como **HTML estático + CSS** com os tokens de `design-system/tokens
     node tools/render.mjs cor <entrada> --out <saida> [--lut <arq.cube>|--perfil bruto-canon]
                                         [--exposicao auto|off] [--referencia <arq|pasta>] [--forca 0.7]
     node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
+    node tools/render.mjs rostos <imagem> [--forcar] [--cache <pasta>]
+    node tools/render.mjs checar <fonte.html> [--largura 1080] [--altura 1440] [--minimo 0.06]
     node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--alcance 80] [--limiar 100] [--mapa "escala,dx,dy"]
                                               [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]
     node tools/render.mjs contorno <imagem> --quad "x,y x,y x,y x,y" --out <pasta> [--escala 1] [--zona 200]
@@ -133,8 +135,21 @@ dele: `Y:\numpulo\Transferencia\Gramado\Carrossel\Carrossel Gramado`.
     acima dele. Gradiente que começa a cair na base entrega metade do valor medido na
     primeira linha do título.
   - **Pele é sinal, não veto.** Fruta, tijolo e parede ocre entram na faixa de pele; o que
-    denuncia rosto é a faixa concentrar pele acima da média da própria foto (≥1,6×). Com
-    alerta, ler a imagem antes de fixar a âncora.
+    denuncia rosto é a faixa concentrar pele acima da média da própria foto (≥1,6×). É
+    dica de onde olhar, nunca a decisão.
+- **Texto sobre rosto é gate, não revisão: `render.mjs checar <fonte.html>`.** Obrigatório
+  antes de toda entrega com pessoa na peça; `montar.ps1` chama e aborta se acusar.
+  - A medição é no **slide renderizado**, não na foto de origem: `object-fit: cover`
+    recorta e o split comprime a foto em meia altura, então bbox medida na imagem não
+    corresponde ao que sai. Erro pago em 2026-08-08, no slide 10.
+  - Quem enxerga é `render.mjs rostos`, que chama `claude -p` (assinatura Max, regra 1) —
+    o Chromium do Playwright **não** expõe `FaceDetector`, testado com e sem as flags de
+    Shape Detection. Detecção fica em cache por **SHA-1 do conteúdo** em `.rostos/`
+    (gitignored): LLM varia entre chamadas e a peça precisa do mesmo veredito.
+  - O prompt exige feições visíveis. Sem essa cláusula, nuca e cabeça de costas viram
+    "rosto" e a auditoria acusa conflito onde não há.
+  - `--minimo` (padrão 0,06 da altura) ignora rosto pequeno: turista no fundo da multidão
+    não é o mesmo problema que a cara de quem assina o canal.
 - **Achar o frame pelo índice, não abrindo vídeo**: destinos indexados pelo `edicao-num-pulo`
   têm `_index/<cidade>/index.csv`, uma linha por clipe com `landmark`, `descricao`, `plano`,
   `classe` (broll/fala) e caminho. Busca por texto chega direto no clipe.

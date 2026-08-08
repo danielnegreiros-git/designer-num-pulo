@@ -5,7 +5,10 @@ import { chromium } from 'playwright'
 import sharp from 'sharp'
 import { resolve, extname, basename } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, unlinkSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
+import { tmpdir } from 'node:os'
 import { dirname } from 'node:path'
 
 const USO = `uso:
@@ -16,6 +19,8 @@ const USO = `uso:
                                       [--referencia <arq|pasta>] [--forca 0.7] [--preset <arq.xmp>] [--preset-forca 1]
                                       [--curva 0..1] [--saturacao 1] [--nitidez 0..5] [--qualidade 92]
   node tools/render.mjs analisar <imagem> [--grade "3x4"] [--alvo 4.5]
+  node tools/render.mjs rostos <imagem> [--forcar]              # detecta rosto e grava .rostos.json
+  node tools/render.mjs checar <fonte.html> [--minimo 0.06]     # texto sobre rosto, no slide renderizado
   node tools/render.mjs hald --out <identity.png> [--nivel 8]   # gera identity para trazer look do Lightroom
   node tools/render.mjs medir-tela <imagem> --regiao "x0,y0,x1,y1" [--limiar 100] [--alcance 80] [--mapa "escala,dx,dy"]
                                             [--esq|--dir "y0,y1"] [--topo|--fundo "x0,x1"]   # borda ocluída: restrinja o trecho
@@ -34,6 +39,8 @@ const FLAGS_PERMITIDAS = {
   cor: ['out', 'lut', 'perfil', 'exposicao', 'referencia', 'forca', 'preset', 'preset-forca', 'curva', 'saturacao', 'nitidez', 'qualidade'],
   analisar: ['grade', 'alvo'],
   hald: ['out', 'nivel'],
+  rostos: ['forcar', 'cache'],
+  checar: ['largura', 'altura', 'minimo', 'cache'],
   'medir-tela': ['regiao', 'limiar', 'mapa', 'alcance', 'esq', 'dir', 'topo', 'fundo'],
   contorno: ['quad', 'out', 'escala', 'zona'],
   info: [],
@@ -48,8 +55,8 @@ function lerArgs(argv, comando) {
     if (a.startsWith('--')) {
       const nome = a.slice(2)
       if (!permitidas.includes(nome)) sairUso(`flag desconhecida: ${a}`)
-      if (nome === 'pagina-inteira') {
-        op.paginaInteira = true
+      if (nome === 'pagina-inteira' || nome === 'forcar') {
+        op[nome === 'forcar' ? 'forcar' : 'paginaInteira'] = true
         continue
       }
       const v = argv[++i]
@@ -918,6 +925,181 @@ async function cor(pos, op) {
   console.log(JSON.stringify({ ok: true, saida: op.out, largura: r.width, altura: r.height, aplicado }))
 }
 
+// ── rostos ──────────────────────────────────────────────────────────────────
+// Texto sobre a cara de alguém é erro que não se negocia, e nenhuma métrica de
+// pixel resolve: pele por cor acusa fruta e parede ocre, detalhe não separa
+// rosto de fachada. O Chromium do Playwright não expõe FaceDetector (testado em
+// 2026-08-08, com e sem as flags de Shape Detection), então quem enxerga é o
+// LLM da assinatura Max, via `claude -p` — nunca a API paga (regra 1).
+//
+// O resultado fica em cache num `.rostos.json` ao lado da imagem: peça tem que
+// sair igual em toda montagem, e chamar modelo a cada render seria lento e
+// variável. `--forcar` refaz a detecção quando a imagem muda.
+// Cache por SHA-1 do conteúdo, não por caminho: o `checar` recria os slides em
+// pasta temporária a cada rodada, e cache por caminho faria o detector rodar de
+// novo toda vez. Detector é LLM e varia entre chamadas — na primeira rodada a
+// nuca da Paula no slide 8 virou "rosto" e sumiu na seguinte. Mesmo pixel,
+// mesmo veredito.
+function caminhoCacheRostos(imagem, pastaCache) {
+  const hash = createHash('sha1').update(readFileSync(imagem)).digest('hex').slice(0, 16)
+  const pasta = pastaCache || resolve(dirname(resolve(imagem)), '.rostos')
+  mkdirSync(pasta, { recursive: true })
+  return resolve(pasta, `${hash}.json`)
+}
+
+async function rostos(pos, op) {
+  const [entrada] = pos
+  if (!entrada) sairUso('rostos exige <imagem>')
+  if (!existsSync(entrada)) sairUso(`arquivo não existe: ${entrada}`)
+  const cache = caminhoCacheRostos(entrada, op.cache)
+
+  if (existsSync(cache) && !op.forcar) {
+    const guardado = JSON.parse(readFileSync(cache, 'utf8'))
+    console.log(JSON.stringify({ ok: true, imagem: entrada, origem: 'cache', ...guardado }))
+    return
+  }
+
+  const reduzida = resolve(tmpdir(), `np-rostos-${Date.now()}.jpg`)
+  await sharp(entrada).resize(1024, null, { fit: 'inside' }).jpeg({ quality: 88 }).toFile(reduzida)
+
+  // O prompt exige feições visíveis: pessoa de costas não é rosto para efeito de
+  // diagramação, e sem essa cláusula o detector marcou a nuca da Paula no slide 8.
+  const prompt = `Leia a imagem ${reduzida} e responda SO com JSON, sem texto antes ou depois, no formato {"rostos":[{"x":0.0,"y":0.0,"w":0.0,"h":0.0}]}. Cada objeto e a caixa do rosto de UMA pessoa, em FRACAO da largura e altura da imagem (0 a 1), com x,y do canto superior esquerdo e a caixa indo do queixo ao topo da testa. REGRAS: conte apenas rostos com feicoes visiveis (pelo menos olhos ou boca aparecendo). NAO conte pessoa de costas, nuca, cabeca coberta, rosto em foto dentro da foto, cartaz, estatua, manequim ou reflexo. Se nao houver nenhum rosto assim, devolva {"rostos":[]}.`
+
+  let bruto
+  try {
+    // `claude` no Windows é um .cmd: vai por `cmd /c` em vez de shell:true,
+    // que concatena argumentos sem escapar (Node avisa, DEP0190).
+    const viaCmd = process.platform === 'win32'
+    bruto = execFileSync(
+      viaCmd ? 'cmd' : 'claude',
+      viaCmd ? ['/c', 'claude', '-p', '--allowedTools', 'Read'] : ['-p', '--allowedTools', 'Read'],
+      { input: prompt, encoding: 'utf8', maxBuffer: 1 << 20 },
+    )
+  } catch (e) {
+    unlinkSync(reduzida)
+    throw new Error(`falha ao chamar claude -p: ${e.message}`)
+  }
+  unlinkSync(reduzida)
+
+  const casado = bruto.match(/\{[\s\S]*\}/)
+  if (!casado) throw new Error(`resposta sem JSON: ${bruto.slice(0, 200)}`)
+  const lista = JSON.parse(casado[0]).rostos
+  if (!Array.isArray(lista)) throw new Error('resposta sem campo rostos')
+  const validos = lista
+    .filter((r) => ['x', 'y', 'w', 'h'].every((k) => Number.isFinite(r[k])))
+    .map((r) => ({ x: +r.x.toFixed(3), y: +r.y.toFixed(3), w: +r.w.toFixed(3), h: +r.h.toFixed(3) }))
+
+  // Faixa vertical proibida: do topo do rosto mais alto à base do mais baixo,
+  // com folga. Texto encostado no queixo lê tão mal quanto texto em cima dele.
+  const FOLGA = 0.03
+  const zona = validos.length
+    ? {
+        y0: +Math.max(0, Math.min(...validos.map((r) => r.y)) - FOLGA).toFixed(3),
+        y1: +Math.min(1, Math.max(...validos.map((r) => r.y + r.h)) + FOLGA).toFixed(3),
+      }
+    : null
+
+  const saida = { rostos: validos, zonaProibida: zona, folga: FOLGA }
+  writeFileSync(cache, JSON.stringify(saida, null, 2))
+  console.log(JSON.stringify({ ok: true, imagem: entrada, origem: 'deteccao', cache, ...saida }))
+}
+
+// ── checar ──────────────────────────────────────────────────────────────────
+// Auditoria final: texto em cima de rosto, no slide RENDERIZADO. Medir rosto na
+// imagem de origem não basta — `object-fit: cover` recorta, o split comprime a
+// foto em meia altura e o bloco de texto tem posição própria. No slide 10 a
+// medição na imagem dizia zona 0,44–0,77 e o conflito real só aparece depois do
+// cover. Erro apontado pelo Daniel em 2026-08-08.
+//
+// Rosto menor que --minimo (fração da altura do slide) não conta: turista no
+// fundo da multidão não é o mesmo problema que a cara de quem assina o canal.
+async function checar(pos, op) {
+  const [arquivo] = pos
+  if (!arquivo) sairUso('checar exige <arquivo.html>')
+  if (!existsSync(arquivo)) sairUso(`arquivo não existe: ${arquivo}`)
+  const largura = inteiro(op, 'largura', 1080)
+  const altura = inteiro(op, 'altura', 1440)
+  const minimo = numero(op, 'minimo', 0.06)
+  const pasta = resolve(tmpdir(), `np-checar-${Date.now()}`)
+  mkdirSync(pasta, { recursive: true })
+  // Cache de rostos fica ao lado da fonte, não no temporário: assim a auditoria
+  // repetida da mesma peça não redetecta nem muda de veredito.
+  const pastaCache = op.cache || resolve(dirname(resolve(arquivo)), '.rostos')
+  mkdirSync(pastaCache, { recursive: true })
+
+  const browser = await chromium.launch()
+  let caixas
+  let quantos
+  try {
+    const page = await browser.newPage({ viewport: { width: largura, height: altura } })
+    await page.goto(pathToFileURL(resolve(arquivo)).href, { waitUntil: 'networkidle' })
+    await page.evaluate(() => document.fonts.ready)
+    const medido = await page.evaluate(() => {
+      const slides = [...document.querySelectorAll('.slide')]
+      return slides.map((s) => {
+        const base = s.getBoundingClientRect()
+        const alvos = [...s.querySelectorAll('.bloco, .marcador, .assinatura')]
+        return alvos.map((el) => {
+          const r = el.getBoundingClientRect()
+          return {
+            classe: el.className,
+            y0: (r.top - base.top) / base.height,
+            y1: (r.bottom - base.top) / base.height,
+            x0: (r.left - base.left) / base.width,
+            x1: (r.right - base.left) / base.width,
+          }
+        })
+      })
+    })
+    caixas = medido
+    quantos = medido.length
+    for (let i = 0; i < quantos; i++) {
+      await page.evaluate((n) => document.querySelectorAll('.slide')[n].scrollIntoView(), i)
+      const el = await page.$(`.slide:nth-of-type(${i + 1})`)
+      await el.screenshot({ path: `${pasta}/slide-${String(i + 1).padStart(2, '0')}.png` })
+    }
+  } finally {
+    await browser.close()
+  }
+
+  const conflitos = []
+  const porSlide = []
+  for (let i = 0; i < quantos; i++) {
+    const n = String(i + 1).padStart(2, '0')
+    const arq = `${pasta}/slide-${n}.png`
+    const saidaRostos = execFileSync(process.execPath, [
+      new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'),
+      'rostos', arq, '--cache', pastaCache,
+    ], { encoding: 'utf8', maxBuffer: 1 << 20 })
+    const det = JSON.parse(saidaRostos)
+    const grandes = det.rostos.filter((r) => r.h >= minimo)
+    const meus = []
+    for (const r of grandes) {
+      for (const c of caixas[i]) {
+        const cruzaY = c.y1 > r.y && c.y0 < r.y + r.h
+        const cruzaX = c.x1 > r.x && c.x0 < r.x + r.w
+        if (cruzaY && cruzaX) {
+          meus.push({ elemento: c.classe, rosto: r })
+        }
+      }
+    }
+    porSlide.push({ slide: i + 1, rostos: grandes.length, rostosIgnorados: det.rostos.length - grandes.length, conflitos: meus.length })
+    if (meus.length) conflitos.push({ slide: i + 1, ocorrencias: meus })
+  }
+
+  console.log(JSON.stringify({
+    ok: conflitos.length === 0,
+    fonte: arquivo,
+    slides: quantos,
+    minimoAlturaRosto: minimo,
+    resumo: porSlide,
+    conflitos,
+    capturas: pasta,
+  }, null, 2))
+  if (conflitos.length) process.exit(1)
+}
+
 // ── analisar ────────────────────────────────────────────────────────────────
 // Onde o texto cabe numa foto é medição, não olho: luminância diz se o branco
 // lê, desvio diz se a área é limpa ou cheia de detalhe. O slide 3 (fachada da
@@ -1082,30 +1264,54 @@ async function analisar(pos, op) {
   const peleMedia = celulas.reduce((s, c) => s + c.pele, 0) / celulas.length
   for (const f of faixas) f.peleRelativa = peleMedia > 0.5 ? +(f.pele / peleMedia).toFixed(2) : 0
 
-  // Âncora: menos detalhe entre cima e baixo; empate técnico (< 4) desempata
-  // pelo scrim menor. Concentração de pele penaliza mas não decide sozinha —
-  // quem confirma é a leitura da imagem, este número só diz onde olhar.
+  // Rosto detectado VETA a faixa, sem negociação. É a única checagem aqui que
+  // não é heurística: vem de `render.mjs rostos`, gravado no .rostos.json.
+  const cacheRostos = caminhoCacheRostos(entrada)
+  const deteccao = existsSync(cacheRostos) ? JSON.parse(readFileSync(cacheRostos, 'utf8')) : null
+  const zona = deteccao?.zonaProibida ?? null
+  for (const f of faixas) {
+    const inicio = f.linhas[0] / linhas
+    const fim = (f.linhas[1] + 1) / linhas
+    f.temRosto = Boolean(zona && fim > zona.y0 && inicio < zona.y1)
+  }
+
+  // Âncora: faixa com rosto está fora. Entre as que sobram, menos detalhe;
+  // empate técnico (< 4) desempata pelo scrim menor.
   const candidatas = faixas.filter((f) => f.nome !== 'meio')
+  const livres = candidatas.filter((f) => !f.temRosto)
+  const pool = livres.length ? livres : candidatas
   const custo = (f) => f.detalhe + (f.peleRelativa >= 1.6 ? 12 : 0)
-  const ordenadas = [...candidatas].sort((a, b) =>
+  const ordenadas = [...pool].sort((a, b) =>
     Math.abs(custo(a) - custo(b)) < 4 ? a.scrim - b.scrim : custo(a) - custo(b))
   const escolhida = ordenadas[0]
   const rival = ordenadas[1]
   const suspeitas = candidatas.filter((f) => f.peleRelativa >= 1.6).map((f) => f.nome)
+
+  const rostosBloco = deteccao
+    ? {
+        quantidade: deteccao.rostos.length,
+        zonaProibida: zona,
+        faixasVetadas: candidatas.filter((f) => f.temRosto).map((f) => f.nome),
+        alerta: livres.length === 0 && zona
+          ? 'rosto atravessa topo e rodapé — reenquadrar ou trocar a imagem, não existe âncora limpa'
+          : undefined,
+      }
+    : {
+        pendente: 'sem .rostos.json — rodar `render.mjs rostos <imagem>` antes de fixar a âncora',
+        peleSugereGente: suspeitas.length > 0,
+      }
 
   console.log(JSON.stringify({
     ok: true,
     imagem: entrada,
     alvoContraste: alvo,
     globais,
+    rostos: rostosBloco,
     faixas,
     recomendacao: {
       ancora: escolhida.nome,
       scrim: escolhida.scrim,
       concentracaoDePele: suspeitas,
-      confirmar: suspeitas.length
-        ? `ler a imagem antes de fixar a âncora: ${suspeitas.join(' e ')} concentra(m) pele acima da média da foto`
-        : undefined,
       motivo: rival
         ? `detalhe ${escolhida.detalhe} contra ${rival.detalhe} em ${rival.nome}; scrim ${escolhida.scrim} contra ${rival.scrim}`
         : 'faixa única',
@@ -1123,7 +1329,7 @@ async function info(pos) {
 }
 
 const [comando, ...resto] = process.argv.slice(2)
-const comandos = { render, tratar, recortar, cor, analisar, hald: gerarHald, 'medir-tela': medirTela, contorno, info }
+const comandos = { render, tratar, recortar, cor, analisar, rostos, checar, hald: gerarHald, 'medir-tela': medirTela, contorno, info }
 if (!comandos[comando]) sairUso(comando ? `comando desconhecido: ${comando}` : undefined)
 const { pos, op } = lerArgs(resto, comando)
 comandos[comando](pos, op).catch((e) => {

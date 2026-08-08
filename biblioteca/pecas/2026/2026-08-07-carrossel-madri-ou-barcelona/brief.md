@@ -173,6 +173,30 @@ Corrigido na peça e no template.
 O slide 10 passou a ser foto de Barcelona num slide de CTA neutro. Assumido: a foto dos
 dois juntos vale mais no CTA que a neutralidade de cidade, e o texto continua equilibrado.
 
+## Calibração do Daniel, 2026-08-08 (rodada 4)
+
+"No último o texto está em cima dos nossos rostos. Você precisa colocar essa checagem
+quando houver rostos."
+
+Virou gate, não revisão: **`render.mjs checar <fonte.html>`**, chamado pelo `montar.ps1`,
+que aborta a montagem se acusar conflito. Três decisões que a implementação exigiu:
+
+1. **Medir no slide renderizado, não na foto.** `object-fit: cover` recorta e o split
+   comprime a foto em meia altura — a bbox medida na imagem de origem não corresponde ao
+   que sai. Na origem a zona proibida do slide 10 era y 0,44–0,77; no slide, 0,52–0,70.
+2. **Quem enxerga é `claude -p`** (assinatura Max, regra 1). O Chromium do Playwright não
+   expõe `FaceDetector`, testado com e sem as flags de Shape Detection. Cache por SHA-1
+   do conteúdo, porque LLM varia entre chamadas e a peça precisa do mesmo veredito.
+3. **O prompt exige feições visíveis.** Sem essa cláusula, a nuca da Paula no slide 8
+   virou "rosto" e a auditoria acusou conflito onde não havia. `--minimo` ignora rosto
+   menor que 6% da altura, para turista de fundo não travar a montagem.
+
+Correção do slide 10: bloco para o topo. Os dois rostos ocupam y 0,52–0,70; abaixo deles
+não cabiam os 470px do bloco, acima sobravam 619px. Rosto no terço inferior e texto no
+superior compõe melhor que o contrário.
+
+Resultado: `ok=true`, zero conflitos nos dez slides.
+
 ## Pendências
 
 - Aprovação do Daniel. Publicação é ação humana.

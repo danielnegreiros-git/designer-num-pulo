@@ -4,3 +4,6 @@ node_modules/
 
 # previews de auditoria: gerados por montar.ps1 -Preview, nao sao entrega
 **/saida/_preview-*.jpg
+
+# cache de deteccao de rosto (render.mjs rostos): reproduzivel a partir da imagem
+**/.rostos/

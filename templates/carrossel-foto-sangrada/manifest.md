@@ -55,6 +55,13 @@ Cor de texto: **branco puro, sempre**. Nenhuma cor de marca toca fotografia
 4. **Âncora e scrim saem de `analisar`**, nunca do olho. Faixa com concentração
    de pele acima de 1,6× a média pede leitura da imagem antes de fixar a âncora.
 5. **Foto do acervo passa por `render.mjs cor`** quando for frame de bruto.
+6. **Texto nunca cobre rosto, e isso é gate.** `render.mjs checar <fonte.html>`
+   mede no slide renderizado e `montar.ps1` aborta se acusar. Quando os rostos
+   ocupam o terço central, a âncora vai para o topo — foi o que resolveu o CTA
+   da peça de origem.
+7. **Onde existe foto do destino, usa-se foto.** Frame de vídeo vem de 16:9,
+   sofre upscale de ~1,33× no 3:4 e denuncia ao lado de foto exportada. Frame só
+   quando não há foto da cena, e aí escolhe-se o clipe mais gráfico.
 
 ## Montagem
 
